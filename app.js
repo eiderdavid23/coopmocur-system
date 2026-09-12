@@ -1,6 +1,8 @@
 let inventario=[], pestanaActual='STOCK';
 let historial=JSON.parse(localStorage.getItem('delimani_historial'))||[];
 let usuarioActual=null;
+let usuariosLista=[];
+let _escuchandoUsuarios=false;
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -67,6 +69,18 @@ function iniciarApp() {
   document.getElementById('pantalla-login').style.display = 'none';
   document.getElementById('pantalla-app').style.display = 'block';
   document.getElementById('header-usuario').textContent = '👤 ' + usuarioActual.nombre + ' · ' + usuarioActual.rol;
+
+  const esAdmin = usuarioActual.rol === 'admin';
+  document.getElementById('tab-USUARIOS').style.display = esAdmin ? '' : 'none';
+
+  if (esAdmin && window.escucharUsuarios && !_escuchandoUsuarios) {
+    _escuchandoUsuarios = true;
+    window.escucharUsuarios((data) => {
+      usuariosLista = Object.entries(data).map(([k,v]) => ({...v, _key:k}));
+      if (pestanaActual === 'USUARIOS') renderizar();
+    });
+  }
+
   renderizar();
 }
 
@@ -89,7 +103,7 @@ function confirmarLogout() {
 
 function cambiarPestana(p) {
   pestanaActual = p;
-  ['STOCK','ENTRADAS','VENTAS','HISTORIAL','GANANCIAS'].forEach(t => {
+  ['STOCK','ENTRADAS','VENTAS','HISTORIAL','GANANCIAS','USUARIOS'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (el) el.classList.remove('active');
   });
@@ -105,6 +119,7 @@ function renderizar() {
   if (pestanaActual==='VENTAS')    c.innerHTML = vistaVentas();
   if (pestanaActual==='HISTORIAL') c.innerHTML = vistaHistorial();
   if (pestanaActual==='GANANCIAS') c.innerHTML = vistaGanancias();
+  if (pestanaActual==='USUARIOS')  c.innerHTML = vistaUsuarios();
 }
 
 function vistaStock() {
@@ -257,3 +272,57 @@ window.actualizarInventarioDesdeFirebase=function(lista){
   inventario=lista;
   if (usuarioActual) renderizar();
 };
+
+// --- Gestión de usuarios (solo admin) ---
+function vistaUsuarios() {
+  if (!usuarioActual || usuarioActual.rol !== 'admin') return '<div class="empty">Sin acceso</div>';
+  const filas = !usuariosLista.length ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">No hay usuarios registrados.</p>' :
+  usuariosLista.map(u => {
+    const rolTxt = u.rol === 'admin' ? 'Administrador' : 'Usuario';
+    const estadoTxt = u.estado === 'pendiente' ? 'Pendiente' : 'Aprobado';
+    return '<div class="card"><div><div class="card-name">'+(u.usuario||u._key)+'</div><div class="card-price">'+rolTxt+' · '+estadoTxt+'</div></div>'+
+    '<div class="card-actions"><button class="btn-edit" onclick="cambiarRolUsuario(\''+u._key+'\',\''+(u.rol||'usuario')+'\')" title="Cambiar rol">🔁</button>'+
+    '<button class="btn-edit" onclick="cambiarEstadoUsuario(\''+u._key+'\',\''+(u.estado||'aprobado')+'\')" title="'+(u.estado==='pendiente'?'Aprobar':'Suspender')+'">'+(u.estado==='pendiente'?'✅':'⛔')+'</button>'+
+    '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')">🗑️</button></div></div>';
+  }).join('');
+  return '<div class="fade"><div class="top-bar"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div></div>'+
+  '<button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div>'+
+  '<div id="lista-usuarios">'+filas+'</div></div>';
+}
+
+function cambiarRolUsuario(uid, rolActualU) {
+  if (uid === usuarioActual._key) { toast('⚠️ No puedes cambiar tu propio rol desde aquí.'); return; }
+  const nuevo = rolActualU === 'admin' ? 'usuario' : 'admin';
+  window.actualizarUsuarioFirebase(uid, { rol: nuevo });
+  toast('✅ Rol actualizado.');
+}
+
+function cambiarEstadoUsuario(uid, estadoActualU) {
+  if (uid === usuarioActual._key) { toast('⚠️ No puedes cambiar el estado de tu propia cuenta.'); return; }
+  const nuevo = estadoActualU === 'pendiente' ? 'aprobado' : 'pendiente';
+  window.actualizarUsuarioFirebase(uid, { estado: nuevo });
+  toast('✅ Estado actualizado.');
+}
+
+function eliminarUsuarioApp(uid) {
+  if (uid === usuarioActual._key) { toast('⚠️ No puedes eliminar tu propia cuenta.'); return; }
+  if (!confirm('¿Eliminar este usuario del sistema? No se puede deshacer.')) return;
+  window.eliminarUsuarioFirebase(uid);
+  toast('🗑️ Usuario eliminado.');
+}
+
+function abrirCrearUsuario() {
+  const usuario = prompt('Nombre de usuario para la nueva cuenta:');
+  if (!usuario) return;
+  const password = prompt('Contraseña (mínimo 6 caracteres):');
+  if (!password) return;
+  if (password.length < 6) { toast('⚠️ La contraseña debe tener al menos 6 caracteres.'); return; }
+  const esAdminNuevo = confirm('¿Será administrador?\n\nAceptar = Administrador\nCancelar = Usuario normal');
+  window.crearUsuarioAdminFirebase(usuario, password, esAdminNuevo ? 'admin' : 'usuario')
+    .then(() => toast('✅ Usuario creado correctamente.'))
+    .catch(err => {
+      console.error(err);
+      if (err.code === 'auth/email-already-in-use') toast('❌ Ese usuario ya existe.');
+      else toast('❌ Error al crear el usuario.');
+    });
+}

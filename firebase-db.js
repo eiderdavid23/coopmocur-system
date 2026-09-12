@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getDatabase, ref, push, remove, update, onValue, get } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getDatabase, ref, push, set, remove, update, onValue, get } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
-const app = initializeApp({
+const firebaseConfig = {
   apiKey: "AIzaSyCAq0QNY7tE1td489ZakrVKjTg6iRe5nyc",
   authDomain: "nexus23-7f041.firebaseapp.com",
   databaseURL: "https://nexus23-7f041-default-rtdb.firebaseio.com",
@@ -11,13 +11,15 @@ const app = initializeApp({
   messagingSenderId: "231907744812",
   appId: "1:231907744812:web:98be1a8a497abb151ac589",
   measurementId: "G-LDVBX9VQYC"
-});
+};
 
+const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
 const productosRef = ref(db, 'delimani_productos');
 const historialRef = ref(db, 'delimani_historial');
+const usuariosRef = ref(db, 'usuarios');
 
 async function perfilSiValido(uid) {
   const snap = await get(ref(db, 'usuarios/' + uid));
@@ -84,6 +86,34 @@ window.cargarHistorialDesdeFirebase = function(callback) {
     lista.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
     callback(lista);
   });
+};
+
+// --- Gestión de usuarios (misma tabla 'usuarios' que NEXUS23) ---
+window.escucharUsuarios = function(callback) {
+  onValue(usuariosRef, (snapshot) => {
+    callback(snapshot.val() || {});
+  });
+};
+
+window.actualizarUsuarioFirebase = (uid, cambios) => update(ref(db, 'usuarios/' + uid), cambios);
+window.eliminarUsuarioFirebase = (uid) => remove(ref(db, 'usuarios/' + uid));
+
+let appSecundaria = null;
+function obtenerAuthSecundaria() {
+  if (!appSecundaria) {
+    appSecundaria = initializeApp(firebaseConfig, 'AdminCreate');
+  }
+  return getAuth(appSecundaria);
+}
+
+window.crearUsuarioAdminFirebase = async function(usuario, password, rol) {
+  const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@nexus23.local';
+  const authSecundaria = obtenerAuthSecundaria();
+  const credencial = await createUserWithEmailAndPassword(authSecundaria, correoInterno, password);
+  const uid = credencial.user.uid;
+  await set(ref(db, 'usuarios/' + uid), { usuario, rol, estado: 'aprobado' });
+  await signOut(authSecundaria);
+  return uid;
 };
 
 window.firebaseReady = true;
