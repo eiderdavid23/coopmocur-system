@@ -20,8 +20,16 @@ function esperarFirebase(cb, intentos=0) {
 
 window.addEventListener('load', () => {
   esperarFirebase(() => {
-    document.getElementById('pantalla-cargando').style.display = 'none';
-    document.getElementById('pantalla-login').style.display = 'block';
+    window.revisarSesionExistente((perfil) => {
+      document.getElementById('pantalla-cargando').style.display = 'none';
+
+      if (perfil) {
+        usuarioActual = perfil;
+        iniciarApp();
+      } else {
+        document.getElementById('pantalla-login').style.display = 'block';
+      }
+    });
   });
 });
 
