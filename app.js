@@ -3,6 +3,8 @@ let historial=JSON.parse(localStorage.getItem('delimani_historial'))||[];
 let usuarioActual=null;
 let usuariosLista=[];
 let _escuchandoUsuarios=false;
+let gastosInversion={mani:600000,transporte:70000,bolsaUnidad:70000,bolsaPaquete:2000};
+let _escuchandoGastos=false;
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -79,6 +81,17 @@ function iniciarApp() {
       usuariosLista = Object.entries(data).map(([k,v]) => ({...v, _key:k}));
       if (pestanaActual === 'USUARIOS') renderizar();
     });
+  }
+
+  if (esAdmin && window.escucharGastos) {
+    if (window.asegurarGastosSeed) window.asegurarGastosSeed(gastosInversion);
+    if (!_escuchandoGastos) {
+      _escuchandoGastos = true;
+      window.escucharGastos((data) => {
+        if (data) gastosInversion = data;
+        if (pestanaActual === 'GANANCIAS') renderizar();
+      });
+    }
   }
 
   renderizar();
@@ -214,6 +227,7 @@ function calcularPrecioVenta(pct) {
   const pc=parseFloat(document.getElementById('ins-preciocompra').value);
   if(!isNaN(pc)) document.getElementById('ins-precio').value=Math.round(pc*(1+pct/100));
 }
+
 function vistaGanancias() {
   const esAdmin=usuarioActual&&usuarioActual.rol==='admin';
   if(!esAdmin) return '<div class="empty">Sin acceso</div>';
@@ -221,8 +235,47 @@ function vistaGanancias() {
   const lista=inventario.map(r=>{const pc=r.precioCompra||0;const pv=r.precio||0;const gu=pv-pc;const gt=gu*r.cantidad;
     return '<div class="card fade"><div><div class="card-name">'+r.nombre+'</div><div class="card-price">Compra: <span>$'+pc.toLocaleString()+'</span></div><div class="card-price">Venta: <span>$'+pv.toLocaleString()+'</span></div><div class="card-price">Ganancia/u: <span style="color:#059669;font-weight:700">$'+gu.toLocaleString()+'</span></div><div class="card-price">Ganancia total: <span style="color:#059669;font-weight:700">$'+gt.toLocaleString()+'</span></div></div></div>';
   }).join('');
-  return '<div class="fade"><div class="top-bar"><div class="section-title">GANANCIAS</div></div><div class="card" style="background:#f0fdf4;border-color:#86efac;margin-bottom:16px"><div><div class="section-title" style="color:#059669">Ganancia potencial total</div><div style="font-size:1.4rem;font-weight:800;color:#059669">$'+totalG.toLocaleString()+'</div></div></div>'+lista+'</div>';
+
+  const g = gastosInversion;
+  const totalInversion = (g.mani||0)+(g.transporte||0)+(g.bolsaUnidad||0)+(g.bolsaPaquete||0);
+  const gananciaNeta = totalG - totalInversion;
+  const colorNeta = gananciaNeta >= 0 ? '#059669' : '#dc2626';
+
+  const bloqueInversion =
+    '<div class="card" style="background:#fff7ed;border-color:#fdba74;margin-bottom:16px">'+
+      '<div class="top-bar" style="margin-bottom:6px"><div class="section-title" style="color:#c2410c">💸 Costo de inversión</div>'+
+      '<button class="btn-edit" onclick="abrirEditarGastos()">✏️</button></div>'+
+      '<div class="card-price">Gasto de maní: <span>$'+Number(g.mani).toLocaleString()+'</span></div>'+
+      '<div class="card-price">Gasto de transporte: <span>$'+Number(g.transporte).toLocaleString()+'</span></div>'+
+      '<div class="card-price">Gasto en bolsa por unidad: <span>$'+Number(g.bolsaUnidad).toLocaleString()+'</span></div>'+
+      '<div class="card-price">Gasto de bolsa por paquete: <span>$'+Number(g.bolsaPaquete).toLocaleString()+'</span></div>'+
+      '<div class="card-price" style="margin-top:6px;font-weight:800;color:#c2410c">Total invertido: $'+totalInversion.toLocaleString()+'</div>'+
+    '</div>';
+
+  const bloqueNeta =
+    '<div class="card" style="background:'+(gananciaNeta>=0?'#f0fdf4':'#fef2f2')+';border-color:'+(gananciaNeta>=0?'#86efac':'#fca5a5')+';margin-bottom:16px">'+
+      '<div class="section-title" style="color:'+colorNeta+'">📈 Ganancia neta de la inversión</div>'+
+      '<div style="font-size:1.4rem;font-weight:800;color:'+colorNeta+'">$'+gananciaNeta.toLocaleString()+'</div>'+
+      '<div style="font-size:0.75rem;color:#94a3b8;margin-top:4px">Ganancia total ($'+totalG.toLocaleString()+') menos costo de inversión ($'+totalInversion.toLocaleString()+')</div>'+
+    '</div>';
+
+  return '<div class="fade"><div class="top-bar"><div class="section-title">GANANCIAS</div></div><div class="card" style="background:#f0fdf4;border-color:#86efac;margin-bottom:16px"><div><div class="section-title" style="color:#059669">Ganancia potencial total</div><div style="font-size:1.4rem;font-weight:800;color:#059669">$'+totalG.toLocaleString()+'</div></div></div>'+
+  bloqueInversion + bloqueNeta + lista + '</div>';
 }
+
+function abrirEditarGastos() {
+  const mani = parseFloat(prompt('Gasto de maní ($):', gastosInversion.mani));
+  if (isNaN(mani)) return;
+  const transporte = parseFloat(prompt('Gasto de transporte ($):', gastosInversion.transporte));
+  if (isNaN(transporte)) return;
+  const bolsaUnidad = parseFloat(prompt('Gasto en bolsa por unidad ($):', gastosInversion.bolsaUnidad));
+  if (isNaN(bolsaUnidad)) return;
+  const bolsaPaquete = parseFloat(prompt('Gasto de bolsa por paquete ($):', gastosInversion.bolsaPaquete));
+  if (isNaN(bolsaPaquete)) return;
+  window.actualizarGastosFirebase({ mani, transporte, bolsaUnidad, bolsaPaquete });
+  toast('✅ Costos de inversión actualizados.');
+}
+
 function procesarGuardarPieza() {
   const nombre=document.getElementById('ins-nombre').value.trim();
   const precio=parseFloat(document.getElementById('ins-precio').value);

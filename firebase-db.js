@@ -20,6 +20,7 @@ const auth = getAuth(app);
 const productosRef = ref(db, 'delimani_productos');
 const historialRef = ref(db, 'delimani_historial');
 const usuariosRef = ref(db, 'usuarios');
+const gastosRef = ref(db, 'delimani_gastos');
 
 async function perfilSiValido(uid) {
   const snap = await get(ref(db, 'usuarios/' + uid));
@@ -114,6 +115,22 @@ window.crearUsuarioAdminFirebase = async function(usuario, password, rol) {
   await set(ref(db, 'usuarios/' + uid), { usuario, rol, estado: 'aprobado' });
   await signOut(authSecundaria);
   return uid;
+};
+
+// --- Costos de inversión (Ganancias) ---
+window.escucharGastos = function(callback) {
+  onValue(gastosRef, (snapshot) => {
+    callback(snapshot.val());
+  });
+};
+
+window.actualizarGastosFirebase = (cambios) => update(gastosRef, cambios);
+
+window.asegurarGastosSeed = async function(defaults) {
+  const snap = await get(gastosRef);
+  if (!snap.exists()) {
+    await set(gastosRef, defaults);
+  }
 };
 
 window.firebaseReady = true;
