@@ -1,5 +1,5 @@
 let inventario=[], pestanaActual='STOCK';
-let historial=JSON.parse(localStorage.getItem('coopmocur_historial'))||[];
+let historial=JSON.parse(localStorage.getItem('delimani_historial'))||[];
 let usuarioActual=null;
 
 function toast(msg){
@@ -9,7 +9,6 @@ function toast(msg){
   window._tt=setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-// Esperar a que Firebase esté listo
 function esperarFirebase(cb, intentos=0) {
   if (window.loginConFirebase) { cb(); return; }
   if (intentos > 30) {
@@ -31,7 +30,7 @@ async function intentarLogin() {
   const password = document.getElementById('login-password').value;
   const btn = document.getElementById('login-btn');
   const err = document.getElementById('login-error');
-  if (!usuario || !password) { toast('⚠️ Ingresa alias y clave'); return; }
+  if (!usuario || !password) { toast('⚠️ Ingresa usuario y clave'); return; }
   btn.textContent = 'Verificando...';
   btn.disabled = true;
   err.style.display = 'none';
@@ -60,32 +59,29 @@ function iniciarApp() {
   document.getElementById('pantalla-login').style.display = 'none';
   document.getElementById('pantalla-app').style.display = 'block';
   document.getElementById('header-usuario').textContent = '👤 ' + usuarioActual.nombre + ' · ' + usuarioActual.rol;
-  if (usuarioActual.rol === 'admin') document.getElementById('tab-USUARIOS').style.display = '';
-    document.getElementById('tab-GANANCIAS').style.display = '';
   renderizar();
 }
 
 function cerrarSesion() {
-  document.getElementById("modal-logout").classList.add("visible"); }
-function confirmarLogout() {  if(true) {
-    usuarioActual = null;
-    document.getElementById('pantalla-login').style.display = 'block';
-    document.getElementById('pantalla-app').style.display = 'none';
-    document.getElementById('login-usuario').value = '';
-    document.getElementById('login-password').value = '';
-    document.getElementById('tab-USUARIOS').style.display = 'none';
-    document.getElementById('tab-GANANCIAS').style.display = 'none';
-    document.getElementById('login-btn').innerHTML = '<span>→</span> Ingresar';
-    document.getElementById('login-btn').disabled = false;
-    document.getElementById('login-error').style.display = 'none';
-    pestanaActual = 'STOCK';
-    document.getElementById('modal-logout').classList.remove('visible');
-  }
+  document.getElementById("modal-logout").classList.add("visible");
+}
+function confirmarLogout() {
+  if (window.cerrarSesionFirebase) window.cerrarSesionFirebase();
+  usuarioActual = null;
+  document.getElementById('pantalla-login').style.display = 'block';
+  document.getElementById('pantalla-app').style.display = 'none';
+  document.getElementById('login-usuario').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-btn').innerHTML = '<span>→</span> Ingresar';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-error').style.display = 'none';
+  pestanaActual = 'STOCK';
+  document.getElementById('modal-logout').classList.remove('visible');
 }
 
 function cambiarPestana(p) {
   pestanaActual = p;
-  ['STOCK','ENTRADAS','VENTAS','HISTORIAL','USUARIOS'].forEach(t => {
+  ['STOCK','ENTRADAS','VENTAS','HISTORIAL','GANANCIAS'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (el) el.classList.remove('active');
   });
@@ -100,21 +96,20 @@ function renderizar() {
   if (pestanaActual==='ENTRADAS')  c.innerHTML = vistaEntradas();
   if (pestanaActual==='VENTAS')    c.innerHTML = vistaVentas();
   if (pestanaActual==='HISTORIAL') c.innerHTML = vistaHistorial();
-  if (pestanaActual==='USUARIOS')  vistaUsuarios();
-  if (pestanaActual==='GANANCIAS') c.innerHTML=vistaGanancias();
+  if (pestanaActual==='GANANCIAS') c.innerHTML = vistaGanancias();
 }
 
 function vistaStock() {
   const esAdmin = usuarioActual && usuarioActual.rol==='admin';
   const bajos = inventario.filter(r=>r.cantidad<=3).length;
-  return '<div class="fade"><div class="top-bar"><div><div class="section-title">REPUESTOS EN STOCK</div><div class="section-sub">'+inventario.length+' repuesto(s)'+(bajos>0?' · <b style="color:#dc2626">'+bajos+' bajo stock</b>':'')+
+  return '<div class="fade"><div class="top-bar"><div><div class="section-title">PRODUCTOS EN STOCK</div><div class="section-sub">'+inventario.length+' producto(s)'+(bajos>0?' · <b style="color:#dc2626">'+bajos+' bajo stock</b>':'')+
   '</div></div>'+(esAdmin?'<button class="btn btn-green" onclick="abrirModalAgregar()">+ Agregar</button>':'')+
   '</div><input type="text" class="search" id="busqueda" onkeyup="filtrarStock()" placeholder="🔍 Buscar por nombre..."><div id="lista-stock">'+generarListaStock(inventario)+'</div></div>';
 }
 
 function generarListaStock(lista) {
   const esAdmin = usuarioActual && usuarioActual.rol==='admin';
-  if (!lista.length) return '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">📦</div><p style="font-size:0.9rem">No hay repuestos registrados.</p></div>';
+  if (!lista.length) return '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🥜</div><p style="font-size:0.9rem">No hay productos registrados.</p></div>';
   return lista.map(r => {
     const bajo = r.cantidad<=3;
     return '<div class="card'+(bajo?' bajo':'')+'"><div><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div></div>'+
@@ -131,9 +126,9 @@ function filtrarStock() {
 }
 
 function vistaEntradas() {
-  const ops = inventario.map(r=>'<option value="'+r._key+'">'+r.nombre+' (Actual: '+r.cantidad+')</option>').join('')||'<option>Sin repuestos</option>';
+  const ops = inventario.map(r=>'<option value="'+r._key+'">'+r.nombre+' (Actual: '+r.cantidad+')</option>').join('')||'<option>Sin productos</option>';
   return '<div class="fade"><div class="section-title" style="margin-bottom:14px">📥 REGISTRAR ENTRADA DE STOCK</div>'+
-  '<div class="form-box"><div class="form-group"><label class="form-label">Seleccionar Repuesto</label><select id="select-entrada" class="form-select">'+ops+'</select></div>'+
+  '<div class="form-box"><div class="form-group"><label class="form-label">Seleccionar Producto</label><select id="select-entrada" class="form-select">'+ops+'</select></div>'+
   '<div class="form-group"><label class="form-label">Cantidad que ingresa</label><input type="number" id="cant-entrada" class="form-input"></div>'+
   '<button class="btn btn-blue btn-full" onclick="procesarEntrada()">SUMAR AL STOCK</button></div></div>';
 }
@@ -147,9 +142,9 @@ function procesarEntrada() {
 }
 
 function vistaVentas() {
-  const ops=inventario.map(r=>'<option value="'+r._key+'">'+r.nombre+' - $'+r.precio+' (Disp: '+r.cantidad+')</option>').join('')||'<option>Sin repuestos</option>';
+  const ops=inventario.map(r=>'<option value="'+r._key+'">'+r.nombre+' - $'+r.precio+' (Disp: '+r.cantidad+')</option>').join('')||'<option>Sin productos</option>';
   return '<div class="fade"><div class="section-title" style="margin-bottom:14px">💰 REGISTRAR NUEVA VENTA</div>'+
-  '<div class="form-box"><div class="form-group"><label class="form-label">Seleccionar Repuesto</label><select id="select-venta" class="form-select">'+ops+'</select></div>'+
+  '<div class="form-box"><div class="form-group"><label class="form-label">Seleccionar Producto</label><select id="select-venta" class="form-select">'+ops+'</select></div>'+
   '<div class="form-group"><label class="form-label">Cantidad a vender</label><input type="number" id="cant-venta" class="form-input"></div>'+
   '<button class="btn btn-green btn-full" onclick="procesarVenta()">CONFIRMAR VENTA</button></div></div>';
 }
@@ -180,44 +175,11 @@ function registrarHistorial(tipo,detalle) {
   const a=new Date();
   historial.unshift({tipo,detalle,fecha:a.getHours()+':'+a.getMinutes().toString().padStart(2,'0'),usuario:usuarioActual?usuarioActual.nombre:''});
   if(window.guardarHistorialEnFirebase){const e={tipo:historial[0].tipo,detalle:historial[0].detalle,fecha:new Date().toISOString(),usuario:historial[0].usuario};window.guardarHistorialEnFirebase(e);}
-  localStorage.setItem('coopmocur_historial',JSON.stringify(historial));
+  localStorage.setItem('delimani_historial',JSON.stringify(historial));
 }
 
 function limpiarHistorial() {
-  if (confirm('¿Borrar historial?')) { historial=[]; localStorage.setItem('coopmocur_historial','[]'); renderizar(); }
-}
-
-async function vistaUsuarios() {
-  const c=document.getElementById('contenido-principal');
-  c.innerHTML='<div class="fade"><div class="top-bar"><div class="section-title">👥 GESTIÓN DE USUARIOS</div><button class="btn btn-blue" onclick="abrirModalUsuario()">+ Crear</button></div><div id="lista-usuarios"><div style="text-align:center;padding:30px;color:#94a3b8">Cargando...</div></div></div>';
-  const usuarios=await window.obtenerUsuarios();
-  const filas=usuarios.map(u=>'<div class="usuario-card"><div><div style="font-weight:700;font-size:0.9rem">'+u.nombre+'</div><div style="font-size:0.75rem;color:#64748b;margin-top:3px">@'+u.usuario+' · <span class="'+(u.rol==='admin'?'badge-admin':'badge-emp')+'">'+u.rol+'</span></div></div>'+(u.usuario!=='eider'?'<button class="btn-del" onclick="eliminarUsuario(\''+u._key+'\',\''+u.nombre+'\')">🗑️</button>':'<span style="font-size:0.7rem;color:#94a3b8">Principal</span>')+'</div>').join('');
-  document.getElementById('lista-usuarios').innerHTML=filas||'<p style="color:#94a3b8;text-align:center;padding:20px">No hay usuarios.</p>';
-}
-
-function abrirModalUsuario() {
-  ['nuevo-nombre','nuevo-usuario','nuevo-password'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('modal-usuario').classList.add('visible');
-}
-function cerrarModalUsuario() { document.getElementById('modal-usuario').classList.remove('visible'); }
-
-async function procesarCrearUsuario() {
-  const nombre=document.getElementById('nuevo-nombre').value.trim();
-  const usuario=document.getElementById('nuevo-usuario').value.trim().toLowerCase();
-  const password=document.getElementById('nuevo-password').value;
-  const rol=document.getElementById('nuevo-rol').value;
-  if (!nombre||!usuario||!password) return toast('⚠️ Rellena todos los campos.');
-  const res=await window.crearUsuarioEnFirebase(usuario,password,rol,nombre);
-  if (!res.ok) return toast('❌ '+res.msg);
-  toast('✅ Usuario @'+usuario+' creado.');
-  cerrarModalUsuario(); vistaUsuarios();
-}
-
-async function eliminarUsuario(key,nombre) {
-  if (confirm('¿Eliminar a '+nombre+'?')) {
-    await window.eliminarUsuarioDeFirebase(key);
-    toast('✅ Usuario eliminado.'); vistaUsuarios();
-  }
+  if (confirm('¿Borrar historial?')) { historial=[]; localStorage.setItem('delimani_historial','[]'); renderizar(); }
 }
 
 function abrirModalAgregar() {
@@ -275,129 +237,15 @@ function eliminarPieza(key) {
   const item=inventario.find(r=>r._key===key);
   if(!item) return;
   _eliminarKey=key;
-  document.getElementById('eliminar-nombre-texto').textContent='Se eliminara: '+item.nombre;
+  document.getElementById('eliminar-nombre-texto').textContent='Se eliminará: '+item.nombre;
   document.getElementById('modal-eliminar').classList.add('visible');
 }
 function confirmarEliminarPieza() {
   document.getElementById('modal-eliminar').classList.remove('visible');
   if(_eliminarKey) { window.eliminarDeFirebase(_eliminarKey); _eliminarKey=null; }
 }
-function eliminarPiezaOLD(key) {
-  const item=inventario.find(r=>r._key===key);
-  if (item&&confirm('¿Eliminar "'+item.nombre+'"?')) window.eliminarDeFirebase(key);
-}
 
 window.actualizarInventarioDesdeFirebase=function(lista){
   inventario=lista;
   if (usuarioActual) renderizar();
 };
-
-// SIDEBAR
-let moduloActual='INVENTARIO';
-function abrirSidebar(){
-  document.getElementById('sidebar').classList.add('show');
-  document.getElementById('sidebar-overlay').classList.add('show');
-}
-function cerrarSidebar(){
-  document.getElementById('sidebar').classList.remove('show');
-  document.getElementById('sidebar-overlay').classList.remove('show');
-}
-function cambiarModulo(mod){
-  moduloActual=mod;
-  document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
-  cerrarSidebar();
-  const mt=document.getElementById('modulo-titulo');
-  if(mt) mt.textContent=mod;
-  const c=document.getElementById('contenido-principal');
-  const tabs=document.querySelector('.tabs');
-  if(mod==='PLANILLAS'){
-    if(tabs) tabs.style.display='none';
-    if(c) c.innerHTML=vistaPlanillas();
-  } else {
-    if(tabs) tabs.style.display='';
-    renderizar();
-  }
-}
-
-// ============ PLANILLAS / CONDUCTORES ============
-let conductores=[];
-
-window.actualizarConductoresDesdeFirebase=function(lista){
-  conductores=lista;
-  if(moduloActual==='PLANILLAS'){
-    const c=document.getElementById('contenido-principal');
-    if(c) c.innerHTML=vistaPlanillas();
-  }
-};
-
-function vistaPlanillas(){
-  const esAdmin = usuarioActual && usuarioActual.rol==='admin';
-  const filas = !conductores.length ? '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🧾</div><p style="font-size:0.9rem">No hay conductores registrados.</p></div>' :
-    conductores.map(cd=>{
-      const soatVencido = cd.soat && new Date(cd.soat) < new Date();
-      return '<div class="card"><div><div class="card-name">'+cd.nombre+'</div>'+
-        '<div style="font-size:0.85rem;color:#64748b;margin-top:4px">CC: '+cd.cedula+' · Tel: '+cd.telefono+'</div>'+
-        '<div style="font-size:0.85rem;color:#64748b">Motocarro: '+cd.motocarro+'</div>'+
-        '<div style="font-size:0.85rem;color:#64748b">'+cd.correo+'</div>'+
-        '<div style="font-size:0.85rem;margin-top:4px"'+(soatVencido?' style="color:#dc2626;font-weight:700"':'')+'>SOAT: '+(cd.soat||'-')+(soatVencido?' ⚠️ VENCIDO':'')+'</div></div>'+
-    (esAdmin?'<div class="card-actions"><button class="btn-edit" onclick="abrirModalConductor(\''+cd._key+'\')">✏️</button><button class="btn-del" onclick="abrirModalEliminarConductor(\''+cd._key+'\')">🗑️</button></div>':'')+
-        '</div>';
-    }).join('');
-  return '<div class="fade"><div class="top-bar"><div class="section-title">🧾 PLANILLAS</div>'+
-    '<div class="section-sub">'+conductores.length+' conductor(es)</div></div>'+
-    (esAdmin?'<button class="btn btn-green" onclick="abrirModalConductor()">+ Agregar</button>':'')+
-    '</div><div id="lista-conductores">'+filas+'</div></div>';
-}
-
-function abrirModalConductor(key){
-  document.getElementById('conductor-key').value=key||'';
-  if(key){
-    const cd=conductores.find(c=>c._key===key);
-    document.getElementById('conductor-modal-titulo').textContent='✏️ Editar Conductor';
-    document.getElementById('conductor-nombre').value=cd.nombre||'';
-    document.getElementById('conductor-cedula').value=cd.cedula||'';
-    document.getElementById('conductor-telefono').value=cd.telefono||'';
-    document.getElementById('conductor-motocarro').value=cd.motocarro||'';
-    document.getElementById('conductor-correo').value=cd.correo||'';
-    document.getElementById('conductor-soat').value=cd.soat||'';
-  } else {
-    document.getElementById('conductor-modal-titulo').textContent='👤 Nuevo Conductor';
-    ['conductor-nombre','conductor-cedula','conductor-telefono','conductor-motocarro','conductor-correo','conductor-soat'].forEach(id=>document.getElementById(id).value='');
-  }
-  document.getElementById('modal-conductor').classList.add('visible');
-}
-function cerrarModalConductor(){
-  document.getElementById('modal-conductor').classList.remove('visible');
-}
-function procesarGuardarConductor(){
-  const key=document.getElementById('conductor-key').value;
-  const datos={
-    nombre:document.getElementById('conductor-nombre').value.trim(),
-    cedula:document.getElementById('conductor-cedula').value.trim(),
-    telefono:document.getElementById('conductor-telefono').value.trim(),
-    motocarro:document.getElementById('conductor-motocarro').value.trim(),
-    correo:document.getElementById('conductor-correo').value.trim(),
-    soat:document.getElementById('conductor-soat').value
-  };
-  if(!datos.nombre||!datos.cedula){ mostrarToast('Nombre y cédula son obligatorios'); return; }
-  if(key){
-    window.actualizarConductorEnFirebase(key, datos);
-  } else {
-    window.guardarConductorEnFirebase(datos);
-  }
-  cerrarModalConductor();
-  mostrarToast('Conductor guardado');
-}
-let _keyEliminarConductor=null;
-function abrirModalEliminarConductor(key){
-  _keyEliminarConductor=key;
-  const cd=conductores.find(c=>c._key===key);
-  document.getElementById('eliminar-conductor-nombre-texto').textContent=cd?cd.nombre:'';
-  document.getElementById('modal-eliminar-conductor').classList.add('visible');
-}
-function confirmarEliminarConductor(){
-  if(_keyEliminarConductor) window.eliminarConductorDeFirebase(_keyEliminarConductor);
-  document.getElementById('modal-eliminar-conductor').classList.remove('visible');
-  mostrarToast('Conductor eliminado');
-}
