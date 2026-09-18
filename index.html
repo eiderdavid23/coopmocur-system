@@ -113,6 +113,32 @@
     </div>
   </div>
 </div>
+
+<!-- MODAL GENÉRICO DE FORMULARIO (reemplaza prompt()) -->
+<div class="modal-overlay" id="modal-generico">
+  <div class="modal">
+    <h3 id="generico-titulo"></h3>
+    <div id="generico-campos"></div>
+    <p class="login-error" id="generico-error" style="display:none;margin-top:0;margin-bottom:12px"></p>
+    <div class="btn-row">
+      <button class="btn btn-gray" id="generico-cancelar">Cancelar</button>
+      <button class="btn btn-blue" id="generico-aceptar">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GENÉRICO DE CONFIRMACIÓN (reemplaza confirm()) -->
+<div class="modal-overlay" id="modal-confirmar-generico">
+  <div class="modal" style="text-align:center">
+    <h3 style="margin-bottom:8px" id="confirmar-generico-titulo">¿Confirmar acción?</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:20px" id="confirmar-generico-texto"></p>
+    <div class="btn-row">
+      <button class="btn btn-gray" id="confirmar-generico-no">Cancelar</button>
+      <button class="btn btn-blue" id="confirmar-generico-si">Aceptar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
   <script src="app.js"></script>

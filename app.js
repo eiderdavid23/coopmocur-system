@@ -13,6 +13,84 @@ function toast(msg){
   window._tt=setTimeout(()=>t.classList.remove('show'),2800);
 }
 
+// --- Modal genérico de formulario (reemplaza prompt()) ---
+function modalPrompt({ titulo, campos, textoAceptar }) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('modal-generico');
+    const tituloEl = document.getElementById('generico-titulo');
+    const camposEl = document.getElementById('generico-campos');
+    const errorEl = document.getElementById('generico-error');
+    const btnAceptar = document.getElementById('generico-aceptar');
+    const btnCancelar = document.getElementById('generico-cancelar');
+
+    tituloEl.textContent = titulo;
+    btnAceptar.textContent = textoAceptar || 'Aceptar';
+    errorEl.style.display = 'none';
+    camposEl.innerHTML = '';
+
+    (campos || []).forEach((c) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'form-group';
+      if (c.type === 'select') {
+        wrap.innerHTML = '<label class="form-label">' + c.label + '</label><select id="gc-' + c.id + '" class="form-select">' +
+          (c.options || []).map(o => '<option value="' + o.value + '"' + (o.value === c.value ? ' selected' : '') + '>' + o.label + '</option>').join('') +
+          '</select>';
+      } else {
+        wrap.innerHTML = '<label class="form-label">' + c.label + '</label><input type="' + (c.type || 'text') + '" id="gc-' + c.id + '" class="form-input" value="' + (c.value !== undefined && c.value !== null ? c.value : '') + '">';
+      }
+      camposEl.appendChild(wrap);
+    });
+
+    overlay.classList.add('visible');
+    const primerInput = camposEl.querySelector('input, select');
+    if (primerInput) setTimeout(() => primerInput.focus(), 50);
+
+    function limpiar() {
+      overlay.classList.remove('visible');
+      btnAceptar.removeEventListener('click', onAceptar);
+      btnCancelar.removeEventListener('click', onCancelar);
+    }
+    function onAceptar() {
+      const valores = {};
+      (campos || []).forEach((c) => { valores[c.id] = document.getElementById('gc-' + c.id).value.trim(); });
+      limpiar();
+      resolve(valores);
+    }
+    function onCancelar() { limpiar(); resolve(null); }
+
+    btnAceptar.addEventListener('click', onAceptar);
+    btnCancelar.addEventListener('click', onCancelar);
+  });
+}
+
+// --- Modal genérico de confirmación (reemplaza confirm()) ---
+function modalConfirmar(mensaje, opciones) {
+  opciones = opciones || {};
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('modal-confirmar-generico');
+    document.getElementById('confirmar-generico-titulo').textContent = opciones.titulo || '¿Confirmar acción?';
+    document.getElementById('confirmar-generico-texto').textContent = mensaje;
+    const btnSi = document.getElementById('confirmar-generico-si');
+    const btnNo = document.getElementById('confirmar-generico-no');
+    btnSi.textContent = opciones.textoSi || 'Aceptar';
+    if (opciones.peligroso) { btnSi.style.background = '#ef4444'; btnSi.style.color = '#fff'; }
+    else { btnSi.style.background = ''; btnSi.style.color = ''; }
+
+    overlay.classList.add('visible');
+
+    function limpiar() {
+      overlay.classList.remove('visible');
+      btnSi.removeEventListener('click', onSi);
+      btnNo.removeEventListener('click', onNo);
+    }
+    function onSi() { limpiar(); resolve(true); }
+    function onNo() { limpiar(); resolve(false); }
+
+    btnSi.addEventListener('click', onSi);
+    btnNo.addEventListener('click', onNo);
+  });
+}
+
 function esperarFirebase(cb, intentos=0) {
   if (window.loginConFirebase) { cb(); return; }
   if (intentos > 30) {
@@ -214,8 +292,9 @@ function registrarHistorial(tipo,detalle) {
   localStorage.setItem('delimani_historial',JSON.stringify(historial));
 }
 
-function limpiarHistorial() {
-  if (confirm('¿Borrar historial?')) { historial=[]; localStorage.setItem('delimani_historial','[]'); renderizar(); }
+async function limpiarHistorial() {
+  const ok = await modalConfirmar('¿Borrar todo el historial? Esta acción no se puede deshacer.', { textoSi: 'Borrar todo', peligroso: true });
+  if (ok) { historial=[]; localStorage.setItem('delimani_historial','[]'); renderizar(); }
 }
 
 function abrirModalAgregar() {
@@ -242,7 +321,7 @@ function vistaGanancias() {
   const colorNeta = gananciaNeta >= 0 ? '#059669' : '#dc2626';
 
   const bloqueInversion =
-    '<div class="card" style="background:#fff7ed;border-color:#fdba74;margin-bottom:16px">'+
+    '<div class="card" style="background:#fff7ed;border-color:#fdba74;margin-bottom:16px;display:block">'+
       '<div class="top-bar" style="margin-bottom:6px"><div class="section-title" style="color:#c2410c">💸 Costo de inversión</div>'+
       '<button class="btn-edit" onclick="abrirEditarGastos()">✏️</button></div>'+
       '<div class="card-price">Gasto de maní: <span>$'+Number(g.mani).toLocaleString()+'</span></div>'+
@@ -253,9 +332,9 @@ function vistaGanancias() {
     '</div>';
 
   const bloqueNeta =
-    '<div class="card" style="background:'+(gananciaNeta>=0?'#f0fdf4':'#fef2f2')+';border-color:'+(gananciaNeta>=0?'#86efac':'#fca5a5')+';margin-bottom:16px">'+
+    '<div class="card" style="background:'+(gananciaNeta>=0?'#f0fdf4':'#fef2f2')+';border-color:'+(gananciaNeta>=0?'#86efac':'#fca5a5')+';margin-bottom:16px;display:block">'+
       '<div class="section-title" style="color:'+colorNeta+'">📈 Ganancia neta de la inversión</div>'+
-      '<div style="font-size:1.4rem;font-weight:800;color:'+colorNeta+'">$'+gananciaNeta.toLocaleString()+'</div>'+
+      '<div style="font-size:1.4rem;font-weight:800;color:'+colorNeta+';margin-top:4px">$'+gananciaNeta.toLocaleString()+'</div>'+
       '<div style="font-size:0.75rem;color:#94a3b8;margin-top:4px">Ganancia total ($'+totalG.toLocaleString()+') menos costo de inversión ($'+totalInversion.toLocaleString()+')</div>'+
     '</div>';
 
@@ -263,15 +342,21 @@ function vistaGanancias() {
   bloqueInversion + bloqueNeta + lista + '</div>';
 }
 
-function abrirEditarGastos() {
-  const mani = parseFloat(prompt('Gasto de maní ($):', gastosInversion.mani));
-  if (isNaN(mani)) return;
-  const transporte = parseFloat(prompt('Gasto de transporte ($):', gastosInversion.transporte));
-  if (isNaN(transporte)) return;
-  const bolsaUnidad = parseFloat(prompt('Gasto en bolsa por unidad ($):', gastosInversion.bolsaUnidad));
-  if (isNaN(bolsaUnidad)) return;
-  const bolsaPaquete = parseFloat(prompt('Gasto de bolsa por paquete ($):', gastosInversion.bolsaPaquete));
-  if (isNaN(bolsaPaquete)) return;
+async function abrirEditarGastos() {
+  const g = gastosInversion;
+  const r = await modalPrompt({
+    titulo: '💸 Editar costo de inversión',
+    textoAceptar: 'Guardar',
+    campos: [
+      { id: 'mani', label: 'Gasto de maní ($)', type: 'number', value: g.mani },
+      { id: 'transporte', label: 'Gasto de transporte ($)', type: 'number', value: g.transporte },
+      { id: 'bolsaUnidad', label: 'Gasto en bolsa por unidad ($)', type: 'number', value: g.bolsaUnidad },
+      { id: 'bolsaPaquete', label: 'Gasto de bolsa por paquete ($)', type: 'number', value: g.bolsaPaquete }
+    ]
+  });
+  if (!r) return;
+  const mani = parseFloat(r.mani), transporte = parseFloat(r.transporte), bolsaUnidad = parseFloat(r.bolsaUnidad), bolsaPaquete = parseFloat(r.bolsaPaquete);
+  if ([mani, transporte, bolsaUnidad, bolsaPaquete].some(isNaN)) return toast('⚠️ Ingresa valores válidos.');
   window.actualizarGastosFirebase({ mani, transporte, bolsaUnidad, bolsaPaquete });
   toast('✅ Costos de inversión actualizados.');
 }
@@ -357,21 +442,31 @@ function cambiarEstadoUsuario(uid, estadoActualU) {
   toast('✅ Estado actualizado.');
 }
 
-function eliminarUsuarioApp(uid) {
+async function eliminarUsuarioApp(uid) {
   if (uid === usuarioActual._key) { toast('⚠️ No puedes eliminar tu propia cuenta.'); return; }
-  if (!confirm('¿Eliminar este usuario del sistema? No se puede deshacer.')) return;
+  const ok = await modalConfirmar('¿Eliminar este usuario del sistema? No se puede deshacer.', { textoSi: 'Eliminar', peligroso: true });
+  if (!ok) return;
   window.eliminarUsuarioFirebase(uid);
   toast('🗑️ Usuario eliminado.');
 }
 
-function abrirCrearUsuario() {
-  const usuario = prompt('Nombre de usuario para la nueva cuenta:');
-  if (!usuario) return;
-  const password = prompt('Contraseña (mínimo 6 caracteres):');
-  if (!password) return;
-  if (password.length < 6) { toast('⚠️ La contraseña debe tener al menos 6 caracteres.'); return; }
-  const esAdminNuevo = confirm('¿Será administrador?\n\nAceptar = Administrador\nCancelar = Usuario normal');
-  window.crearUsuarioAdminFirebase(usuario, password, esAdminNuevo ? 'admin' : 'usuario')
+async function abrirCrearUsuario() {
+  const r = await modalPrompt({
+    titulo: '➕ Crear usuario',
+    textoAceptar: 'Crear',
+    campos: [
+      { id: 'usuario', label: 'Nombre de usuario' },
+      { id: 'password', label: 'Contraseña (mínimo 6 caracteres)', type: 'password' },
+      { id: 'rol', label: 'Tipo de cuenta', type: 'select', value: 'usuario', options: [
+        { value: 'usuario', label: 'Usuario normal' },
+        { value: 'admin', label: 'Administrador' }
+      ]}
+    ]
+  });
+  if (!r) return;
+  if (!r.usuario || !r.password) { toast('⚠️ Completa usuario y contraseña.'); return; }
+  if (r.password.length < 6) { toast('⚠️ La contraseña debe tener al menos 6 caracteres.'); return; }
+  window.crearUsuarioAdminFirebase(r.usuario, r.password, r.rol)
     .then(() => toast('✅ Usuario creado correctamente.'))
     .catch(err => {
       console.error(err);
