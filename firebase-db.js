@@ -21,6 +21,21 @@ const productosRef = ref(db, 'delimani_productos');
 const historialRef = ref(db, 'delimani_historial');
 const usuariosRef = ref(db, 'usuarios');
 const gastosRef = ref(db, 'delimani_gastos');
+const pedidosRef = ref(db, 'delimani_pedidos');
+
+// --- Notificación por Telegram ---
+const TELEGRAM_BOT_TOKEN = '8679373819:AAH_GkurO0lkyQHddvshXc-knBbGDd-zhrM';
+const TELEGRAM_CHAT_ID = '7533461771';
+
+function notificarTelegram(mensaje) {
+  if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.startsWith('PON_AQUI')) return;
+  if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID.startsWith('PON_AQUI')) return;
+  fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: mensaje })
+  }).catch(err => console.error('Error enviando notificación a Telegram:', err));
+}
 
 async function perfilSiValido(uid) {
   const snap = await get(ref(db, 'usuarios/' + uid));
@@ -131,6 +146,25 @@ window.asegurarGastosSeed = async function(defaults) {
   if (!snap.exists()) {
     await set(gastosRef, defaults);
   }
+};
+
+// --- Pedidos del catálogo ---
+window.guardarPedidoEnFirebase = function(pedido) {
+  push(pedidosRef, pedido);
+  notificarTelegram(
+    '🥜 Nuevo pedido en Maní García\n' +
+    pedido.usuarioNombre + ' pidió ' + pedido.cantidad + ' u. de ' + pedido.productoNombre +
+    ' ($' + (pedido.precio * pedido.cantidad).toLocaleString('es-CO') + ')' +
+    (pedido.nota ? '\nNota: ' + pedido.nota : '')
+  );
+};
+
+window.actualizarPedidoFirebase = (key, cambios) => update(ref(db, 'delimani_pedidos/' + key), cambios);
+
+window.escucharPedidos = function(callback) {
+  onValue(pedidosRef, (snapshot) => {
+    callback(snapshot.val() || {});
+  });
 };
 
 window.firebaseReady = true;
