@@ -53,6 +53,8 @@
 
   <div class="tabs">
     <button class="tab active" id="tab-STOCK"     onclick="cambiarPestana('STOCK')">📦 STOCK</button>
+    <button class="tab"        id="tab-CATALOGO"  onclick="cambiarPestana('CATALOGO')">🛒 CATÁLOGO</button>
+    <button class="tab"        id="tab-PEDIDOS"   onclick="cambiarPestana('PEDIDOS')">🧾 PEDIDOS</button>
     <button class="tab"        id="tab-ENTRADAS"  onclick="cambiarPestana('ENTRADAS')">📥 ENTRADAS</button>
     <button class="tab"        id="tab-VENTAS"    onclick="cambiarPestana('VENTAS')">💰 VENTAS</button>
     <button class="tab"        id="tab-HISTORIAL" onclick="cambiarPestana('HISTORIAL')">📋 HISTORIAL</button>
@@ -99,6 +101,21 @@
     <div class="btn-row">
       <button class="btn btn-gray" onclick="cerrarModalEditar()">Cancelar</button>
       <button class="btn btn-blue" onclick="procesarEditarPieza()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HACER PEDIDO -->
+<div class="modal-overlay" id="modal-pedido">
+  <div class="modal">
+    <h3>🛒 Hacer pedido</h3>
+    <input type="hidden" id="pedido-key">
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:14px" id="pedido-producto-texto"></p>
+    <div class="form-group"><label class="form-label">Cantidad</label><input type="number" id="pedido-cantidad" class="form-input" min="1" value="1"></div>
+    <div class="form-group"><label class="form-label">Nota (opcional)</label><input type="text" id="pedido-nota" class="form-input" placeholder="Ej: para recoger mañana"></div>
+    <div class="btn-row">
+      <button class="btn btn-gray" onclick="document.getElementById('modal-pedido').classList.remove('visible')">Cancelar</button>
+      <button class="btn btn-green" onclick="confirmarPedido()">Enviar pedido</button>
     </div>
   </div>
 </div>

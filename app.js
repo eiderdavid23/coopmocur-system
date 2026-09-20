@@ -5,6 +5,8 @@ let usuariosLista=[];
 let _escuchandoUsuarios=false;
 let gastosInversion={mani:600000,transporte:70000,bolsaUnidad:70000,bolsaPaquete:2000};
 let _escuchandoGastos=false;
+let pedidosLista=[];
+let _escuchandoPedidos=false;
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -172,6 +174,19 @@ function iniciarApp() {
     }
   }
 
+  if (window.escucharPedidos && !_escuchandoPedidos) {
+    _escuchandoPedidos = true;
+    window.escucharPedidos((data) => {
+      pedidosLista = Object.entries(data).map(([k,v]) => ({...v, _key:k}));
+      const tabPedidos = document.getElementById('tab-PEDIDOS');
+      if (tabPedidos && esAdmin) {
+        const pendientes = pedidosLista.filter(p => p.estado === 'pendiente').length;
+        tabPedidos.textContent = '🧾 PEDIDOS' + (pendientes > 0 ? ' (' + pendientes + ')' : '');
+      }
+      if (pestanaActual === 'PEDIDOS') renderizar();
+    });
+  }
+
   renderizar();
 }
 
@@ -194,7 +209,7 @@ function confirmarLogout() {
 
 function cambiarPestana(p) {
   pestanaActual = p;
-  ['STOCK','ENTRADAS','VENTAS','HISTORIAL','GANANCIAS','USUARIOS'].forEach(t => {
+  ['STOCK','CATALOGO','PEDIDOS','ENTRADAS','VENTAS','HISTORIAL','GANANCIAS','USUARIOS'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (el) el.classList.remove('active');
   });
@@ -206,6 +221,8 @@ function renderizar() {
   const c = document.getElementById('contenido-principal');
   if (!c) return;
   if (pestanaActual==='STOCK')     c.innerHTML = vistaStock();
+  if (pestanaActual==='CATALOGO')  c.innerHTML = vistaCatalogo();
+  if (pestanaActual==='PEDIDOS')   c.innerHTML = vistaPedidos();
   if (pestanaActual==='ENTRADAS')  c.innerHTML = vistaEntradas();
   if (pestanaActual==='VENTAS')    c.innerHTML = vistaVentas();
   if (pestanaActual==='HISTORIAL') c.innerHTML = vistaHistorial();
@@ -237,6 +254,118 @@ function generarListaStock(lista) {
 function filtrarStock() {
   const b = document.getElementById('busqueda').value.toLowerCase();
   document.getElementById('lista-stock').innerHTML = generarListaStock(inventario.filter(r=>r.nombre.toLowerCase().includes(b)));
+}
+
+// --- Catálogo (para hacer pedidos) ---
+function vistaCatalogo() {
+  if (!inventario.length) {
+    return '<div class="fade"><div class="top-bar"><div><div class="section-title">🛒 CATÁLOGO</div><div class="section-sub">Elige un producto y haz tu pedido</div></div></div>'+
+    '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🥜</div><p style="font-size:0.9rem">Aún no hay productos en el catálogo.</p></div></div>';
+  }
+  const filas = inventario.map(r => {
+    const agotado = r.cantidad <= 0;
+    return '<div class="card catalogo-card">'+
+      '<div><div class="card-name">'+r.nombre+'</div>'+
+      '<div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div>'+
+      '<span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponible')+'</span></div>'+
+      (agotado
+        ? '<button class="btn btn-gray" disabled>Agotado</button>'
+        : '<button class="btn btn-green" onclick="abrirModalPedido(\''+r._key+'\')">Pedir</button>')+
+    '</div>';
+  }).join('');
+  return '<div class="fade"><div class="top-bar"><div><div class="section-title">🛒 CATÁLOGO</div><div class="section-sub">Elige un producto y haz tu pedido</div></div></div><div id="lista-catalogo">'+filas+'</div></div>';
+}
+
+function abrirModalPedido(key) {
+  const item = inventario.find(r => r._key === key);
+  if (!item) return;
+  document.getElementById('pedido-key').value = key;
+  document.getElementById('pedido-producto-texto').textContent = item.nombre + ' — $' + Number(item.precio).toLocaleString() + ' c/u (disponibles: ' + item.cantidad + ')';
+  document.getElementById('pedido-cantidad').value = 1;
+  document.getElementById('pedido-cantidad').max = item.cantidad;
+  document.getElementById('pedido-nota').value = '';
+  document.getElementById('modal-pedido').classList.add('visible');
+}
+
+function confirmarPedido() {
+  const key = document.getElementById('pedido-key').value;
+  const item = inventario.find(r => r._key === key);
+  const cantidad = parseInt(document.getElementById('pedido-cantidad').value);
+  const nota = document.getElementById('pedido-nota').value.trim();
+  if (!item) return;
+  if (isNaN(cantidad) || cantidad <= 0) return toast('⚠️ Ingresa una cantidad válida.');
+  if (cantidad > item.cantidad) return toast('❌ Solo hay ' + item.cantidad + ' disponibles.');
+
+  window.guardarPedidoEnFirebase({
+    productoKey: key,
+    productoNombre: item.nombre,
+    precio: item.precio,
+    cantidad: cantidad,
+    nota: nota,
+    usuarioNombre: usuarioActual.nombre,
+    usuarioUid: usuarioActual._key,
+    estado: 'pendiente',
+    fecha: new Date().toISOString()
+  });
+
+  document.getElementById('modal-pedido').classList.remove('visible');
+  toast('✅ Pedido enviado. Te avisaremos cuando se confirme.');
+}
+
+// --- Pedidos (vista completa para admin, "mis pedidos" para el resto) ---
+function vistaPedidos() {
+  const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
+  const lista = esAdmin ? pedidosLista : pedidosLista.filter(p => p.usuarioUid === usuarioActual._key);
+  const ordenados = [...lista].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+  const etiquetas = {
+    pendiente: '<span class="pedido-badge pedido-pendiente">Pendiente</span>',
+    confirmado: '<span class="pedido-badge pedido-confirmado">Confirmado</span>',
+    entregado: '<span class="pedido-badge pedido-entregado">Entregado</span>',
+    cancelado: '<span class="pedido-badge pedido-cancelado">Cancelado</span>'
+  };
+
+  const filas = !ordenados.length
+    ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">'+(esAdmin?'No hay pedidos todavía.':'Aún no has hecho pedidos. Ve al Catálogo para pedir algo.')+'</p>'
+    : ordenados.map(p => {
+        const fechaTxt = new Date(p.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        let acciones = '';
+        if (esAdmin && p.estado === 'pendiente') {
+          acciones = '<div class="card-actions"><button class="btn-edit" onclick="cambiarEstadoPedido(\''+p._key+'\',\'confirmado\')" title="Confirmar">✅</button><button class="btn-del" onclick="cambiarEstadoPedido(\''+p._key+'\',\'cancelado\')" title="Cancelar">✖️</button></div>';
+        } else if (esAdmin && p.estado === 'confirmado') {
+          acciones = '<div class="card-actions"><button class="btn-edit" onclick="entregarPedido(\''+p._key+'\')" title="Marcar como entregado">📦</button><button class="btn-del" onclick="cambiarEstadoPedido(\''+p._key+'\',\'cancelado\')" title="Cancelar">✖️</button></div>';
+        }
+        return '<div class="card">'+
+          '<div><div class="card-name">'+p.productoNombre+' × '+p.cantidad+'</div>'+
+          '<div class="card-price">Total: <span>$'+(p.precio*p.cantidad).toLocaleString()+'</span></div>'+
+          (esAdmin ? '<div class="card-price">Pedido por: '+p.usuarioNombre+'</div>' : '')+
+          (p.nota ? '<div class="card-price">Nota: '+p.nota+'</div>' : '')+
+          '<div class="card-price">'+fechaTxt+'</div>'+
+          etiquetas[p.estado]+
+          '</div>'+
+          acciones+
+        '</div>';
+      }).join('');
+
+  return '<div class="fade"><div class="top-bar"><div><div class="section-title">🧾 '+(esAdmin?'PEDIDOS DE TODOS':'MIS PEDIDOS')+'</div></div></div><div id="lista-pedidos">'+filas+'</div></div>';
+}
+
+function cambiarEstadoPedido(key, nuevoEstado) {
+  window.actualizarPedidoFirebase(key, { estado: nuevoEstado });
+  toast(nuevoEstado === 'confirmado' ? '✅ Pedido confirmado.' : '✖️ Pedido cancelado.');
+}
+
+function entregarPedido(key) {
+  const p = pedidosLista.find(x => x._key === key);
+  if (!p) return;
+  const item = inventario.find(r => r._key === p.productoKey);
+  if (item) {
+    if (item.cantidad < p.cantidad) { toast('❌ Ya no hay stock suficiente para entregar este pedido.'); return; }
+    window.actualizarEnFirebase(p.productoKey, { cantidad: item.cantidad - p.cantidad });
+    registrarHistorial('VENTA', 'Pedido entregado: ' + p.cantidad + ' u. de ' + p.productoNombre + ' a ' + p.usuarioNombre + ' (Total: $' + (p.precio*p.cantidad).toLocaleString() + ')');
+  }
+  window.actualizarPedidoFirebase(key, { estado: 'entregado' });
+  toast('📦 Pedido marcado como entregado.');
 }
 
 function vistaEntradas() {
