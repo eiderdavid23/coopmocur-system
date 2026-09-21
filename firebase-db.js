@@ -29,7 +29,6 @@ const TELEGRAM_CHAT_ID = '7533461771';
 
 function notificarTelegram(mensaje) {
   if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.startsWith('PON_AQUI')) return;
-  if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID.startsWith('PON_AQUI')) return;
   fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -41,8 +40,17 @@ async function perfilSiValido(uid) {
   const snap = await get(ref(db, 'usuarios/' + uid));
   const datos = snap.val();
   if (!datos || datos.estado === 'pendiente') return null;
-  return { nombre: datos.usuario, rol: datos.rol, _key: uid };
+  return { nombre: datos.usuario, negocio: datos.negocio || '', rol: datos.rol, _key: uid };
 }
+
+// --- Auto-registro de clientes (catálogo público) ---
+window.registrarClienteFirebase = async function(usuario, negocio, password) {
+  const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@nexus23.local';
+  const credencial = await createUserWithEmailAndPassword(auth, correoInterno, password);
+  const uid = credencial.user.uid;
+  await set(ref(db, 'usuarios/' + uid), { usuario, negocio: negocio || '', rol: 'cliente', estado: 'aprobado' });
+  return { nombre: usuario, negocio: negocio || '', rol: 'cliente', _key: uid };
+};
 
 window.loginConFirebase = async function(usuario, password) {
   const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@nexus23.local';
@@ -151,12 +159,13 @@ window.asegurarGastosSeed = async function(defaults) {
 // --- Pedidos del catálogo ---
 window.guardarPedidoEnFirebase = function(pedido) {
   push(pedidosRef, pedido);
-  notificarTelegram(
-    '🥜 Nuevo pedido en Maní García\n' +
+  let msg = '🥜 Nuevo pedido en Maní García\n' +
     pedido.usuarioNombre + ' pidió ' + pedido.cantidad + ' u. de ' + pedido.productoNombre +
-    ' ($' + (pedido.precio * pedido.cantidad).toLocaleString('es-CO') + ')' +
-    (pedido.nota ? '\nNota: ' + pedido.nota : '')
-  );
+    ' ($' + (pedido.precio * pedido.cantidad).toLocaleString('es-CO') + ')';
+  if (pedido.negocio) msg += '\nNegocio: ' + pedido.negocio;
+  if (pedido.nota) msg += '\nNota: ' + pedido.nota;
+  if (pedido.lat && pedido.lng) msg += '\nUbicación: https://www.google.com/maps?q=' + pedido.lat + ',' + pedido.lng;
+  notificarTelegram(msg);
 };
 
 window.actualizarPedidoFirebase = (key, cambios) => update(ref(db, 'delimani_pedidos/' + key), cambios);

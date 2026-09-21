@@ -14,7 +14,22 @@
   <p style="color:#94a3b8;font-size:0.85rem;font-weight:600">Conectando...</p>
 </div>
 
-<!-- LOGIN -->
+<!-- CATÁLOGO PÚBLICO (sin sesión) -->
+<div id="pantalla-catalogo-publico" style="display:none">
+  <div class="header">
+    <div class="header-left">
+        <h1>DELI MANÍ</h1>
+        <p>MANÍ CONFITADO DE CALIDAD SUPERIOR</p>
+    </div>
+    <div class="header-right" style="flex-direction:row;gap:8px">
+      <button class="btn btn-gray" style="padding:6px 12px;font-size:0.72rem" onclick="mostrarLogin()">Iniciar sesión</button>
+      <button class="btn btn-green" style="padding:6px 12px;font-size:0.72rem" onclick="mostrarRegistro()">Crear cuenta</button>
+    </div>
+  </div>
+  <div class="main" id="contenido-catalogo-publico"></div>
+</div>
+
+<!-- LOGIN / REGISTRO -->
 <div id="pantalla-login" style="display:none">
   <div class="login-bg">
     <div class="login-box">
@@ -22,18 +37,44 @@
         <img src="logo.jpg" alt="Deli Maní" class="login-img">
       </div>
       <div class="login-divider"></div>
-      <div id="login-error" class="login-error">Usuario o contraseña incorrectos</div>
-      <div class="field-wrap">
-        <div class="field-label"><span>👤</span> Usuario</div>
-        <input type="text" id="login-usuario" placeholder="Tu usuario" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
+
+      <div id="bloque-login">
+        <div id="login-error" class="login-error">Usuario o contraseña incorrectos</div>
+        <div class="field-wrap">
+          <div class="field-label"><span>👤</span> Usuario</div>
+          <input type="text" id="login-usuario" placeholder="Tu usuario" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
+        </div>
+        <div class="field-wrap">
+          <div class="field-label"><span>🔒</span> Contraseña</div>
+          <input type="password" id="login-password" placeholder="Tu contraseña" class="field-input">
+        </div>
+        <button class="login-btn" id="login-btn" onclick="intentarLogin()">
+          <span>→</span> Ingresar
+        </button>
+        <p style="text-align:center;font-size:0.78rem;color:#a58862;margin-top:14px">¿Eres cliente nuevo? <a href="#" onclick="mostrarFormularioRegistro();return false" style="color:#5c3a1e;font-weight:700">Crea tu cuenta</a></p>
       </div>
-      <div class="field-wrap">
-        <div class="field-label"><span>🔒</span> Contraseña</div>
-        <input type="password" id="login-password" placeholder="Tu contraseña" class="field-input">
+
+      <div id="bloque-registro" style="display:none">
+        <div id="registro-error" class="login-error"></div>
+        <div class="field-wrap">
+          <div class="field-label"><span>👤</span> Tu nombre</div>
+          <input type="text" id="reg-usuario" placeholder="Nombre completo" class="field-input" autocomplete="off">
+        </div>
+        <div class="field-wrap">
+          <div class="field-label"><span>🏬</span> Nombre del negocio (opcional)</div>
+          <input type="text" id="reg-negocio" placeholder="Ej: Tienda La Esquina" class="field-input" autocomplete="off">
+        </div>
+        <div class="field-wrap">
+          <div class="field-label"><span>🔒</span> Contraseña</div>
+          <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" class="field-input">
+        </div>
+        <button class="login-btn" id="registro-btn" onclick="intentarRegistroCliente()">
+          <span>→</span> Crear cuenta
+        </button>
+        <p style="text-align:center;font-size:0.78rem;color:#a58862;margin-top:14px">¿Ya tienes cuenta? <a href="#" onclick="mostrarFormularioLogin();return false" style="color:#5c3a1e;font-weight:700">Inicia sesión</a></p>
       </div>
-      <button class="login-btn" id="login-btn" onclick="intentarLogin()">
-        <span>→</span> Ingresar
-      </button>
+
+      <p style="text-align:center;margin-top:16px"><a href="#" onclick="mostrarCatalogoPublico();return false" style="font-size:0.75rem;color:#a58862">← Volver al catálogo</a></p>
     </div>
   </div>
 </div>
@@ -112,7 +153,15 @@
     <input type="hidden" id="pedido-key">
     <p style="font-size:0.85rem;color:#64748b;margin-bottom:14px" id="pedido-producto-texto"></p>
     <div class="form-group"><label class="form-label">Cantidad</label><input type="number" id="pedido-cantidad" class="form-input" min="1" value="1"></div>
+    <div class="form-group"><label class="form-label">Nombre del negocio/tienda</label><input type="text" id="pedido-negocio" class="form-input" placeholder="Ej: Tienda La Esquina"></div>
     <div class="form-group"><label class="form-label">Nota (opcional)</label><input type="text" id="pedido-nota" class="form-input" placeholder="Ej: para recoger mañana"></div>
+    <div class="form-group">
+      <label class="form-label">Ubicación</label>
+      <button type="button" class="btn btn-gray btn-full" onclick="capturarUbicacionPedido()">📍 Usar mi ubicación actual</button>
+      <p id="pedido-ubicacion-texto" style="font-size:0.75rem;color:#94a3b8;margin-top:6px"></p>
+      <input type="hidden" id="pedido-lat">
+      <input type="hidden" id="pedido-lng">
+    </div>
     <div class="btn-row">
       <button class="btn btn-gray" onclick="document.getElementById('modal-pedido').classList.remove('visible')">Cancelar</button>
       <button class="btn btn-green" onclick="confirmarPedido()">Enviar pedido</button>

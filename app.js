@@ -7,6 +7,7 @@ let gastosInversion={mani:600000,transporte:70000,bolsaUnidad:70000,bolsaPaquete
 let _escuchandoGastos=false;
 let pedidosLista=[];
 let _escuchandoPedidos=false;
+let pedidoPendientePreLogin=null;
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -111,11 +112,68 @@ window.addEventListener('load', () => {
         usuarioActual = perfil;
         iniciarApp();
       } else {
-        document.getElementById('pantalla-login').style.display = 'block';
+        mostrarCatalogoPublico();
       }
     });
   });
 });
+
+function mostrarCatalogoPublico() {
+  document.getElementById('pantalla-login').style.display = 'none';
+  document.getElementById('pantalla-app').style.display = 'none';
+  document.getElementById('pantalla-catalogo-publico').style.display = 'block';
+  renderizarCatalogoPublico();
+}
+
+function mostrarLogin() {
+  document.getElementById('pantalla-catalogo-publico').style.display = 'none';
+  document.getElementById('pantalla-login').style.display = 'block';
+  mostrarFormularioLogin();
+}
+
+function mostrarRegistro() {
+  document.getElementById('pantalla-catalogo-publico').style.display = 'none';
+  document.getElementById('pantalla-login').style.display = 'block';
+  mostrarFormularioRegistro();
+}
+
+function mostrarFormularioLogin() {
+  document.getElementById('bloque-login').style.display = 'block';
+  document.getElementById('bloque-registro').style.display = 'none';
+}
+
+function mostrarFormularioRegistro() {
+  document.getElementById('bloque-login').style.display = 'none';
+  document.getElementById('bloque-registro').style.display = 'block';
+}
+
+function pedirComoInvitado(key) {
+  pedidoPendientePreLogin = key;
+  mostrarLogin();
+}
+
+function continuarPedidoPendiente() {
+  if (!pedidoPendientePreLogin) return;
+  const key = pedidoPendientePreLogin;
+  pedidoPendientePreLogin = null;
+  setTimeout(() => { cambiarPestana('CATALOGO'); abrirModalPedido(key); }, 200);
+}
+
+function renderizarCatalogoPublico() {
+  const c = document.getElementById('contenido-catalogo-publico');
+  if (!c) return;
+  if (!inventario.length) {
+    c.innerHTML = '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🥜</div><p style="font-size:0.9rem">Aún no hay productos en el catálogo.</p></div>';
+    return;
+  }
+  c.innerHTML = '<div class="fade"><div class="section-title" style="margin-bottom:4px">🛒 Nuestro catálogo</div><div class="section-sub">Inicia sesión o crea una cuenta para pedir</div>'+
+  inventario.map(r => {
+    const agotado = r.cantidad <= 0;
+    return '<div class="card catalogo-card"><div><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div><span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponible')+'</span></div>'+
+    (agotado ? '<button class="btn btn-gray" disabled>Agotado</button>' : '<button class="btn btn-green" onclick="pedirComoInvitado(\''+r._key+'\')">Pedir</button>')+
+    '</div>';
+  }).join('') + '</div>';
+}
 
 async function intentarLogin() {
   const usuario = document.getElementById('login-usuario').value.trim();
@@ -136,10 +194,36 @@ async function intentarLogin() {
     }
     usuarioActual = resultado;
     iniciarApp();
+    continuarPedidoPendiente();
   } catch(e) {
     toast('❌ Error de conexión');
     btn.innerHTML = '<span>→</span> Ingresar';
     btn.disabled = false;
+  }
+}
+
+async function intentarRegistroCliente() {
+  const usuario = document.getElementById('reg-usuario').value.trim();
+  const negocio = document.getElementById('reg-negocio').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const btn = document.getElementById('registro-btn');
+  const err = document.getElementById('registro-error');
+  err.style.display = 'none';
+  if (!usuario || !password) { toast('⚠️ Ingresa tu nombre y una contraseña.'); return; }
+  if (password.length < 6) { toast('⚠️ La contraseña debe tener al menos 6 caracteres.'); return; }
+  btn.textContent = 'Creando cuenta...';
+  btn.disabled = true;
+  try {
+    const perfil = await window.registrarClienteFirebase(usuario, negocio, password);
+    usuarioActual = perfil;
+    iniciarApp();
+    continuarPedidoPendiente();
+  } catch (e) {
+    console.error(e);
+    btn.innerHTML = '<span>→</span> Crear cuenta';
+    btn.disabled = false;
+    err.textContent = (e.code === 'auth/email-already-in-use') ? 'Ese nombre de usuario ya existe.' : 'No se pudo crear la cuenta.';
+    err.style.display = 'block';
   }
 }
 
@@ -148,12 +232,13 @@ document.addEventListener('keydown', e => {
 });
 
 function iniciarApp() {
+  document.getElementById('pantalla-catalogo-publico').style.display = 'none';
   document.getElementById('pantalla-login').style.display = 'none';
   document.getElementById('pantalla-app').style.display = 'block';
   document.getElementById('header-usuario').textContent = '👤 ' + usuarioActual.nombre + ' · ' + usuarioActual.rol;
 
+  aplicarVisibilidadTabs();
   const esAdmin = usuarioActual.rol === 'admin';
-  document.getElementById('tab-USUARIOS').style.display = esAdmin ? '' : 'none';
 
   if (esAdmin && window.escucharUsuarios && !_escuchandoUsuarios) {
     _escuchandoUsuarios = true;
@@ -187,7 +272,18 @@ function iniciarApp() {
     });
   }
 
-  renderizar();
+  cambiarPestana(usuarioActual.rol === 'cliente' ? 'CATALOGO' : 'STOCK');
+}
+
+function aplicarVisibilidadTabs() {
+  const rol = usuarioActual.rol;
+  const esAdmin = rol === 'admin';
+  const esCliente = rol === 'cliente';
+  ['tab-STOCK','tab-ENTRADAS','tab-VENTAS','tab-HISTORIAL'].forEach(id => {
+    document.getElementById(id).style.display = esCliente ? 'none' : '';
+  });
+  document.getElementById('tab-GANANCIAS').style.display = esAdmin ? '' : 'none';
+  document.getElementById('tab-USUARIOS').style.display = esAdmin ? '' : 'none';
 }
 
 function cerrarSesion() {
@@ -196,7 +292,6 @@ function cerrarSesion() {
 function confirmarLogout() {
   if (window.cerrarSesionFirebase) window.cerrarSesionFirebase();
   usuarioActual = null;
-  document.getElementById('pantalla-login').style.display = 'block';
   document.getElementById('pantalla-app').style.display = 'none';
   document.getElementById('login-usuario').value = '';
   document.getElementById('login-password').value = '';
@@ -205,6 +300,7 @@ function confirmarLogout() {
   document.getElementById('login-error').style.display = 'none';
   pestanaActual = 'STOCK';
   document.getElementById('modal-logout').classList.remove('visible');
+  mostrarCatalogoPublico();
 }
 
 function cambiarPestana(p) {
@@ -284,7 +380,26 @@ function abrirModalPedido(key) {
   document.getElementById('pedido-cantidad').value = 1;
   document.getElementById('pedido-cantidad').max = item.cantidad;
   document.getElementById('pedido-nota').value = '';
+  document.getElementById('pedido-negocio').value = (usuarioActual && usuarioActual.negocio) || '';
+  document.getElementById('pedido-lat').value = '';
+  document.getElementById('pedido-lng').value = '';
+  document.getElementById('pedido-ubicacion-texto').textContent = '';
   document.getElementById('modal-pedido').classList.add('visible');
+}
+
+function capturarUbicacionPedido() {
+  const txt = document.getElementById('pedido-ubicacion-texto');
+  if (!navigator.geolocation) { txt.textContent = '❌ Tu navegador no soporta ubicación.'; return; }
+  txt.textContent = 'Obteniendo ubicación...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      document.getElementById('pedido-lat').value = pos.coords.latitude;
+      document.getElementById('pedido-lng').value = pos.coords.longitude;
+      txt.textContent = '📍 Ubicación capturada correctamente.';
+    },
+    () => { txt.textContent = '❌ No se pudo obtener la ubicación. Revisa los permisos.'; },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
 }
 
 function confirmarPedido() {
@@ -292,22 +407,28 @@ function confirmarPedido() {
   const item = inventario.find(r => r._key === key);
   const cantidad = parseInt(document.getElementById('pedido-cantidad').value);
   const nota = document.getElementById('pedido-nota').value.trim();
+  const negocio = document.getElementById('pedido-negocio').value.trim();
+  const lat = document.getElementById('pedido-lat').value;
+  const lng = document.getElementById('pedido-lng').value;
   if (!item) return;
   if (isNaN(cantidad) || cantidad <= 0) return toast('⚠️ Ingresa una cantidad válida.');
   if (cantidad > item.cantidad) return toast('❌ Solo hay ' + item.cantidad + ' disponibles.');
 
-  window.guardarPedidoEnFirebase({
+  const pedido = {
     productoKey: key,
     productoNombre: item.nombre,
     precio: item.precio,
     cantidad: cantidad,
     nota: nota,
+    negocio: negocio,
     usuarioNombre: usuarioActual.nombre,
     usuarioUid: usuarioActual._key,
     estado: 'pendiente',
     fecha: new Date().toISOString()
-  });
+  };
+  if (lat && lng) { pedido.lat = parseFloat(lat); pedido.lng = parseFloat(lng); }
 
+  window.guardarPedidoEnFirebase(pedido);
   document.getElementById('modal-pedido').classList.remove('visible');
   toast('✅ Pedido enviado. Te avisaremos cuando se confirme.');
 }
@@ -325,7 +446,7 @@ function vistaPedidos() {
     cancelado: '<span class="pedido-badge pedido-cancelado">Cancelado</span>'
   };
 
-  const filas = !ordenados.length
+ const filas = !ordenados.length
     ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">'+(esAdmin?'No hay pedidos todavía.':'Aún no has hecho pedidos. Ve al Catálogo para pedir algo.')+'</p>'
     : ordenados.map(p => {
         const fechaTxt = new Date(p.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -339,9 +460,11 @@ function vistaPedidos() {
           '<div><div class="card-name">'+p.productoNombre+' × '+p.cantidad+'</div>'+
           '<div class="card-price">Total: <span>$'+(p.precio*p.cantidad).toLocaleString()+'</span></div>'+
           (esAdmin ? '<div class="card-price">Pedido por: '+p.usuarioNombre+'</div>' : '')+
+          (p.negocio ? '<div class="card-price">Negocio: '+p.negocio+'</div>' : '')+
           (p.nota ? '<div class="card-price">Nota: '+p.nota+'</div>' : '')+
           '<div class="card-price">'+fechaTxt+'</div>'+
           etiquetas[p.estado]+
+          (p.lat && p.lng ? ' <a href="https://www.google.com/maps?q='+p.lat+','+p.lng+'" target="_blank" class="pedido-badge" style="background:#dbeafe;color:#1d4ed8;text-decoration:none">📍 Ver ubicación</a>' : '')+
           '</div>'+
           acciones+
         '</div>';
@@ -538,6 +661,7 @@ function confirmarEliminarPieza() {
 window.actualizarInventarioDesdeFirebase=function(lista){
   inventario=lista;
   if (usuarioActual) renderizar();
+  else renderizarCatalogoPublico();
 };
 
 // --- Gestión de usuarios (solo admin) ---
@@ -545,9 +669,9 @@ function vistaUsuarios() {
   if (!usuarioActual || usuarioActual.rol !== 'admin') return '<div class="empty">Sin acceso</div>';
   const filas = !usuariosLista.length ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">No hay usuarios registrados.</p>' :
   usuariosLista.map(u => {
-    const rolTxt = u.rol === 'admin' ? 'Administrador' : 'Usuario';
+    const rolTxt = u.rol === 'admin' ? 'Administrador' : (u.rol === 'cliente' ? 'Cliente' : 'Usuario');
     const estadoTxt = u.estado === 'pendiente' ? 'Pendiente' : 'Aprobado';
-    return '<div class="card"><div><div class="card-name">'+(u.usuario||u._key)+'</div><div class="card-price">'+rolTxt+' · '+estadoTxt+'</div></div>'+
+    return '<div class="card"><div><div class="card-name">'+(u.usuario||u._key)+'</div><div class="card-price">'+rolTxt+' · '+estadoTxt+(u.negocio?' · '+u.negocio:'')+'</div></div>'+
     '<div class="card-actions"><button class="btn-edit" onclick="cambiarRolUsuario(\''+u._key+'\',\''+(u.rol||'usuario')+'\')" title="Cambiar rol">🔁</button>'+
     '<button class="btn-edit" onclick="cambiarEstadoUsuario(\''+u._key+'\',\''+(u.estado||'aprobado')+'\')" title="'+(u.estado==='pendiente'?'Aprobar':'Suspender')+'">'+(u.estado==='pendiente'?'✅':'⛔')+'</button>'+
     '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')">🗑️</button></div></div>';
