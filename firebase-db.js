@@ -22,18 +22,37 @@ const historialRef = ref(db, 'delimani_historial');
 const usuariosRef = ref(db, 'usuarios');
 const gastosRef = ref(db, 'delimani_gastos');
 const pedidosRef = ref(db, 'delimani_pedidos');
+const adminTelegramRef = ref(db, 'delimani_admin_telegram');
 
-// --- Notificación por Telegram ---
+// --- Notificación por Telegram (a todos los admins que se hayan registrado) ---
 const TELEGRAM_BOT_TOKEN = '8679373819:AAH_GkurO0lkyQHddvshXc-knBbGDd-zhrM';
-const TELEGRAM_CHAT_ID = '7533461771';
+// Chat_id de respaldo, usado solo si ningún admin ha configurado el suyo todavía.
+const TELEGRAM_CHAT_ID_RESPALDO = '7533461771';
 
-function notificarTelegram(mensaje) {
-  if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.startsWith('PON_AQUI')) return;
+window.guardarChatIdTelegramPropio = function(uid, chatId) {
+  return set(ref(db, 'delimani_admin_telegram/' + uid), chatId);
+};
+
+async function obtenerChatIdsAdmin() {
+  const snap = await get(adminTelegramRef);
+  const data = snap.val() || {};
+  const ids = Object.values(data).filter(Boolean);
+  if (ids.length === 0 && TELEGRAM_CHAT_ID_RESPALDO) ids.push(TELEGRAM_CHAT_ID_RESPALDO);
+  return ids;
+}
+
+function enviarMensajeTelegram(chatId, mensaje) {
   fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: mensaje })
+    body: JSON.stringify({ chat_id: chatId, text: mensaje })
   }).catch(err => console.error('Error enviando notificación a Telegram:', err));
+}
+
+async function notificarTelegram(mensaje) {
+  if (!TELEGRAM_BOT_TOKEN) return;
+  const ids = await obtenerChatIdsAdmin();
+  ids.forEach(id => enviarMensajeTelegram(id, mensaje));
 }
 
 async function perfilSiValido(uid) {

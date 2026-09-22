@@ -169,7 +169,8 @@ function renderizarCatalogoPublico() {
   c.innerHTML = '<div class="fade"><div class="section-title" style="margin-bottom:4px">🛒 Nuestro catálogo</div><div class="section-sub">Inicia sesión o crea una cuenta para pedir</div>'+
   inventario.map(r => {
     const agotado = r.cantidad <= 0;
-    return '<div class="card catalogo-card"><div><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div><span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponible')+'</span></div>'+
+    return '<div class="card catalogo-card"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0">'+miniaturaProducto(r)+
+    '<div style="min-width:0"><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div><span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponible')+'</span></div></div>'+
     (agotado ? '<button class="btn btn-gray" disabled>Agotado</button>' : '<button class="btn btn-green" onclick="pedirComoInvitado(\''+r._key+'\')">Pedir</button>')+
     '</div>';
   }).join('') + '</div>';
@@ -339,7 +340,8 @@ function generarListaStock(lista) {
   if (!lista.length) return '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🥜</div><p style="font-size:0.9rem">No hay productos registrados.</p></div>';
   return lista.map(r => {
     const bajo = r.cantidad<=3;
-    return '<div class="card'+(bajo?' bajo':'')+'"><div><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div></div>'+
+    return '<div class="card'+(bajo?' bajo':'')+'"><div style="display:flex;gap:10px;align-items:center">'+miniaturaProducto(r)+
+    '<div><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div></div></div>'+
     '<div style="display:flex;align-items:center;gap:8px"><div style="text-align:center"><div style="font-size:0.65rem;color:#94a3b8;font-weight:700">CANT.</div>'+
     '<span class="badge '+(bajo?'badge-bajo':'badge-ok')+'">'+r.cantidad+'</span></div>'+
     (esAdmin?'<div class="card-actions"><button class="btn-edit" onclick="abrirModalEditar(\''+r._key+'\')">✏️</button><button class="btn-del" onclick="eliminarPieza(\''+r._key+'\')">🗑️</button></div>':'')+
@@ -361,9 +363,10 @@ function vistaCatalogo() {
   const filas = inventario.map(r => {
     const agotado = r.cantidad <= 0;
     return '<div class="card catalogo-card">'+
-      '<div><div class="card-name">'+r.nombre+'</div>'+
+      '<div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0">'+miniaturaProducto(r)+
+      '<div style="min-width:0"><div class="card-name">'+r.nombre+'</div>'+
       '<div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div>'+
-      '<span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponible')+'</span></div>'+
+      '<span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponible')+'</span></div></div>'+
       (agotado
         ? '<button class="btn btn-gray" disabled>Agotado</button>'
         : '<button class="btn btn-green" onclick="abrirModalPedido(\''+r._key+'\')">Pedir</button>')+
@@ -446,7 +449,7 @@ function vistaPedidos() {
     cancelado: '<span class="pedido-badge pedido-cancelado">Cancelado</span>'
   };
 
- const filas = !ordenados.length
+  const filas = !ordenados.length
     ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">'+(esAdmin?'No hay pedidos todavía.':'Aún no has hecho pedidos. Ve al Catálogo para pedir algo.')+'</p>'
     : ordenados.map(p => {
         const fechaTxt = new Date(p.fecha).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -549,8 +552,40 @@ async function limpiarHistorial() {
   if (ok) { historial=[]; localStorage.setItem('delimani_historial','[]'); renderizar(); }
 }
 
+function procesarImagenSeleccionada(event, prefijo) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const maxW = 500;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      document.getElementById(prefijo + '-imagen').value = dataUrl;
+      const preview = document.getElementById(prefijo + '-imagen-preview');
+      preview.src = dataUrl;
+      preview.style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function miniaturaProducto(item) {
+  return item.imagen
+    ? '<img src="'+item.imagen+'" style="width:56px;height:56px;object-fit:cover;border-radius:10px;flex-shrink:0">'
+    : '<div style="width:56px;height:56px;border-radius:10px;background:#f3ead4;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">🥜</div>';
+}
+
 function abrirModalAgregar() {
-  ['ins-nombre','ins-precio','ins-cantidad'].forEach(id=>document.getElementById(id).value='');
+  ['ins-nombre','ins-precio','ins-cantidad','ins-preciocompra','ins-imagen'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ins-imagen-preview').style.display='none';
   document.getElementById('modal-agregar').classList.add('visible');
 }
 function cerrarModalAgregar() { document.getElementById('modal-agregar').classList.remove('visible'); }
@@ -618,8 +653,9 @@ function procesarGuardarPieza() {
   const precio=parseFloat(document.getElementById('ins-precio').value);
   const precioCompra=parseFloat(document.getElementById('ins-preciocompra').value)||0;
   const cantidad=parseInt(document.getElementById('ins-cantidad').value);
+  const imagen=document.getElementById('ins-imagen').value || '';
   if (!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena todos los campos.');
-  window.guardarEnFirebase({nombre,precio,precioCompra,cantidad});
+  window.guardarEnFirebase({nombre,precio,precioCompra,cantidad,imagen});
   cerrarModalAgregar();
 }
 
@@ -631,6 +667,9 @@ function abrirModalEditar(key) {
   document.getElementById('edit-precio').value=item.precio;
   document.getElementById('edit-preciocompra').value=item.precioCompra||0;
   document.getElementById('edit-cantidad').value=item.cantidad;
+  document.getElementById('edit-imagen').value=item.imagen||'';
+  const preview=document.getElementById('edit-imagen-preview');
+  if (item.imagen) { preview.src=item.imagen; preview.style.display='block'; } else { preview.style.display='none'; }
   document.getElementById('modal-editar').classList.add('visible');
 }
 function cerrarModalEditar() { document.getElementById('modal-editar').classList.remove('visible'); }
@@ -640,8 +679,9 @@ function procesarEditarPieza() {
   const precio=parseFloat(document.getElementById('edit-precio').value);
   const precioCompra=parseFloat(document.getElementById('edit-preciocompra').value)||0;
   const cantidad=parseInt(document.getElementById('edit-cantidad').value);
+  const imagen=document.getElementById('edit-imagen').value || '';
   if (!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena todos los campos.');
-  window.actualizarEnFirebase(key,{nombre,precio,precioCompra,cantidad});
+  window.actualizarEnFirebase(key,{nombre,precio,precioCompra,cantidad,imagen});
   cerrarModalEditar();
 }
 
@@ -669,16 +709,30 @@ function vistaUsuarios() {
   if (!usuarioActual || usuarioActual.rol !== 'admin') return '<div class="empty">Sin acceso</div>';
   const filas = !usuariosLista.length ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">No hay usuarios registrados.</p>' :
   usuariosLista.map(u => {
-    const rolTxt = u.rol === 'admin' ? 'Administrador' : (u.rol === 'cliente' ? 'Cliente' : 'Usuario');
+    const rolTxt = u.rol === 'admin' ? 'Administrador' : 'Usuario';
     const estadoTxt = u.estado === 'pendiente' ? 'Pendiente' : 'Aprobado';
-    return '<div class="card"><div><div class="card-name">'+(u.usuario||u._key)+'</div><div class="card-price">'+rolTxt+' · '+estadoTxt+(u.negocio?' · '+u.negocio:'')+'</div></div>'+
+    return '<div class="card"><div><div class="card-name">'+(u.usuario||u._key)+'</div><div class="card-price">'+rolTxt+' · '+estadoTxt+'</div></div>'+
     '<div class="card-actions"><button class="btn-edit" onclick="cambiarRolUsuario(\''+u._key+'\',\''+(u.rol||'usuario')+'\')" title="Cambiar rol">🔁</button>'+
     '<button class="btn-edit" onclick="cambiarEstadoUsuario(\''+u._key+'\',\''+(u.estado||'aprobado')+'\')" title="'+(u.estado==='pendiente'?'Aprobar':'Suspender')+'">'+(u.estado==='pendiente'?'✅':'⛔')+'</button>'+
     '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')">🗑️</button></div></div>';
   }).join('');
   return '<div class="fade"><div class="top-bar"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div></div>'+
-  '<button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div>'+
+  '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-gray" onclick="configurarMiTelegram()">🔔 Mi Telegram</button><button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div></div>'+
   '<div id="lista-usuarios">'+filas+'</div></div>';
+}
+
+async function configurarMiTelegram() {
+  const r = await modalPrompt({
+    titulo: '🔔 Notificaciones de Telegram',
+    textoAceptar: 'Guardar',
+    campos: [
+      { id: 'chatid', label: 'Tu chat_id de Telegram (escríbele "hola" a tu bot y saca tu id con @userinfobot)' }
+    ]
+  });
+  if (!r) return;
+  if (!r.chatid) return toast('⚠️ Ingresa tu chat_id.');
+  await window.guardarChatIdTelegramPropio(usuarioActual._key, r.chatid.trim());
+  toast('✅ Listo, ahora te llegarán los avisos de pedidos por Telegram.');
 }
 
 function cambiarRolUsuario(uid, rolActualU) {

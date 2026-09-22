@@ -113,6 +113,12 @@
     <div class="form-group"><label class="form-label">Nombre del producto</label><input type="text" id="ins-nombre" class="form-input"></div>
     <div class="form-group"><label class="form-label">Precio de compra ($)</label><input type="number" id="ins-preciocompra" class="form-input"><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-gray" style="font-size:0.75rem;padding:4px 10px" onclick="calcularPrecioVenta(10)">+10%</button><button type="button" class="btn btn-gray" style="font-size:0.75rem;padding:4px 10px" onclick="calcularPrecioVenta(20)">+20%</button><button type="button" class="btn btn-gray" style="font-size:0.75rem;padding:4px 10px" onclick="calcularPrecioVenta(30)">+30%</button><button type="button" class="btn btn-gray" style="font-size:0.75rem;padding:4px 10px" onclick="calcularPrecioVenta(50)">+50%</button></div></div><div class="form-group"><label class="form-label">Cantidad disponible</label><input type="number" id="ins-cantidad" class="form-input"></div>
     <div class="form-group"><label class="form-label">Precio de venta ($)</label><input type="number" id="ins-precio" class="form-input"></div>
+    <div class="form-group">
+      <label class="form-label">Foto del producto (opcional)</label>
+      <input type="file" accept="image/*" id="ins-imagen-input" class="form-input" onchange="procesarImagenSeleccionada(event,'ins')">
+      <img id="ins-imagen-preview" style="display:none;max-width:100%;border-radius:10px;margin-top:8px">
+      <input type="hidden" id="ins-imagen">
+    </div>
     <div class="btn-row">
       <button class="btn btn-gray" onclick="cerrarModalAgregar()">Cancelar</button>
       <button class="btn btn-green" onclick="procesarGuardarPieza()">Guardar</button>
@@ -139,6 +145,12 @@
     <div class="form-group"><label class="form-label">Nombre</label><input type="text" id="edit-nombre" class="form-input"></div>
     <div class="form-group"><label class="form-label">Precio de compra ($)</label><input type="number" id="edit-preciocompra" class="form-input"></div><div class="form-group"><label class="form-label">Precio de venta ($)</label><input type="number" id="edit-precio" class="form-input"></div>
     <div class="form-group"><label class="form-label">Cantidad</label><input type="number" id="edit-cantidad" class="form-input"></div>
+    <div class="form-group">
+      <label class="form-label">Foto del producto (opcional)</label>
+      <input type="file" accept="image/*" id="edit-imagen-input" class="form-input" onchange="procesarImagenSeleccionada(event,'edit')">
+      <img id="edit-imagen-preview" style="display:none;max-width:100%;border-radius:10px;margin-top:8px">
+      <input type="hidden" id="edit-imagen">
+    </div>
     <div class="btn-row">
       <button class="btn btn-gray" onclick="cerrarModalEditar()">Cancelar</button>
       <button class="btn btn-blue" onclick="procesarEditarPieza()">Guardar</button>
