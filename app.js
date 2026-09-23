@@ -170,7 +170,7 @@ function renderizarCatalogoPublico() {
   inventario.map(r => {
     const agotado = r.cantidad <= 0;
     return '<div class="card catalogo-card"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0">'+miniaturaProducto(r)+
-    '<div style="min-width:0"><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div><span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponible')+'</span></div></div>'+
+    '<div style="min-width:0"><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div><span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponibles: '+r.cantidad)+'</span></div></div>'+
     (agotado ? '<button class="btn btn-gray" disabled>Agotado</button>' : '<button class="btn btn-green" onclick="pedirComoInvitado(\''+r._key+'\')">Pedir</button>')+
     '</div>';
   }).join('') + '</div>';
@@ -206,6 +206,7 @@ async function intentarLogin() {
 async function intentarRegistroCliente() {
   const usuario = document.getElementById('reg-usuario').value.trim();
   const negocio = document.getElementById('reg-negocio').value.trim();
+  const telefono = document.getElementById('reg-telefono').value.trim();
   const password = document.getElementById('reg-password').value;
   const btn = document.getElementById('registro-btn');
   const err = document.getElementById('registro-error');
@@ -215,7 +216,7 @@ async function intentarRegistroCliente() {
   btn.textContent = 'Creando cuenta...';
   btn.disabled = true;
   try {
-    const perfil = await window.registrarClienteFirebase(usuario, negocio, password);
+    const perfil = await window.registrarClienteFirebase(usuario, negocio, telefono, password);
     usuarioActual = perfil;
     iniciarApp();
     continuarPedidoPendiente();
@@ -269,7 +270,7 @@ function iniciarApp() {
         const pendientes = pedidosLista.filter(p => p.estado === 'pendiente').length;
         tabPedidos.textContent = '🧾 PEDIDOS' + (pendientes > 0 ? ' (' + pendientes + ')' : '');
       }
-      if (pestanaActual === 'PEDIDOS') renderizar();
+      if (pestanaActual === 'PEDIDOS' || pestanaActual === 'CATALOGO') renderizar();
     });
   }
 
@@ -327,6 +328,26 @@ function renderizar() {
   if (pestanaActual==='USUARIOS')  c.innerHTML = vistaUsuarios();
 }
 
+// Cuánto de un producto está "apartado" por pedidos que aún no se han entregado ni cancelado
+function reservadoDeProducto(key) {
+  return pedidosLista
+    .filter(p => p.productoKey === key && (p.estado === 'pendiente' || p.estado === 'confirmado'))
+    .reduce((s, p) => s + Number(p.cantidad || 0), 0);
+}
+
+function disponibilidadReal(item) {
+  const reservado = reservadoDeProducto(item._key);
+  const disponible = item.cantidad - reservado;
+  if (item.cantidad <= 0) return { estado: 'agotado', disponible: 0 };
+  if (disponible <= 0) return { estado: 'reservado', disponible: 0 };
+  return { estado: 'disponible', disponible };
+}
+
+function tienePedidoPendiente() {
+  if (!usuarioActual) return false;
+  return pedidosLista.some(p => p.usuarioUid === usuarioActual._key && p.estado === 'pendiente');
+}
+
 function vistaStock() {
   const esAdmin = usuarioActual && usuarioActual.rol==='admin';
   const bajos = inventario.filter(r=>r.cantidad<=3).length;
@@ -356,34 +377,55 @@ function filtrarStock() {
 
 // --- Catálogo (para hacer pedidos) ---
 function vistaCatalogo() {
+  const bloqueado = usuarioActual.rol === 'cliente' && tienePedidoPendiente();
+  const aviso = bloqueado
+    ? '<div class="empty" style="background:#fff7ed;border-color:#fdba74;color:#c2410c;margin-bottom:14px;padding:16px">⏳ Ya tienes un pedido pendiente de confirmar. Podrás hacer otro en cuanto te lo confirmen.</div>'
+    : '';
+
   if (!inventario.length) {
     return '<div class="fade"><div class="top-bar"><div><div class="section-title">🛒 CATÁLOGO</div><div class="section-sub">Elige un producto y haz tu pedido</div></div></div>'+
     '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🥜</div><p style="font-size:0.9rem">Aún no hay productos en el catálogo.</p></div></div>';
   }
+
   const filas = inventario.map(r => {
-    const agotado = r.cantidad <= 0;
+    const { estado, disponible } = disponibilidadReal(r);
+    const puedePedir = estado === 'disponible' && !bloqueado;
+    let etiqueta, claseBadge, textoBoton;
+    if (estado === 'agotado') { etiqueta = 'Agotado'; claseBadge = 'badge-bajo'; textoBoton = 'Agotado'; }
+    else if (estado === 'reservado') { etiqueta = 'Reservado (pendiente por confirmar)'; claseBadge = ''; textoBoton = 'Reservado'; }
+    else { etiqueta = 'Disponibles: ' + disponible; claseBadge = 'badge-ok'; textoBoton = 'Pedir'; }
+
     return '<div class="card catalogo-card">'+
       '<div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0">'+miniaturaProducto(r)+
       '<div style="min-width:0"><div class="card-name">'+r.nombre+'</div>'+
       '<div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div>'+
-      '<span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponible')+'</span></div></div>'+
-      (agotado
-        ? '<button class="btn btn-gray" disabled>Agotado</button>'
-        : '<button class="btn btn-green" onclick="abrirModalPedido(\''+r._key+'\')">Pedir</button>')+
+      '<span class="badge '+claseBadge+'" style="'+(estado==='reservado'?'background:#fef3c7;color:#92400e':'')+'">'+etiqueta+'</span></div></div>'+
+      (puedePedir
+        ? '<button class="btn btn-green" onclick="abrirModalPedido(\''+r._key+'\')">Pedir</button>'
+        : '<button class="btn btn-gray" disabled>'+textoBoton+'</button>')+
     '</div>';
   }).join('');
-  return '<div class="fade"><div class="top-bar"><div><div class="section-title">🛒 CATÁLOGO</div><div class="section-sub">Elige un producto y haz tu pedido</div></div></div><div id="lista-catalogo">'+filas+'</div></div>';
+  return '<div class="fade"><div class="top-bar"><div><div class="section-title">🛒 CATÁLOGO</div><div class="section-sub">Elige un producto y haz tu pedido</div></div></div>'+aviso+'<div id="lista-catalogo">'+filas+'</div></div>';
 }
 
 function abrirModalPedido(key) {
+  if (usuarioActual.rol === 'cliente' && tienePedidoPendiente()) {
+    toast('⏳ Ya tienes un pedido pendiente de confirmar. Espera a que te lo confirmen para hacer otro.');
+    return;
+  }
   const item = inventario.find(r => r._key === key);
   if (!item) return;
+  const { estado, disponible } = disponibilidadReal(item);
+  if (estado === 'agotado') { toast('❌ Ese producto está agotado.'); return; }
+  if (estado === 'reservado') { toast('⏳ Esos productos ya los pidió otra persona y están pendientes de confirmar.'); return; }
+
   document.getElementById('pedido-key').value = key;
-  document.getElementById('pedido-producto-texto').textContent = item.nombre + ' — $' + Number(item.precio).toLocaleString() + ' c/u (disponibles: ' + item.cantidad + ')';
+  document.getElementById('pedido-producto-texto').textContent = item.nombre + ' — $' + Number(item.precio).toLocaleString() + ' c/u (disponibles: ' + disponible + ')';
   document.getElementById('pedido-cantidad').value = 1;
-  document.getElementById('pedido-cantidad').max = item.cantidad;
+  document.getElementById('pedido-cantidad').max = disponible;
   document.getElementById('pedido-nota').value = '';
   document.getElementById('pedido-negocio').value = (usuarioActual && usuarioActual.negocio) || '';
+  document.getElementById('pedido-telefono').value = (usuarioActual && usuarioActual.telefono) || '';
   document.getElementById('pedido-lat').value = '';
   document.getElementById('pedido-lng').value = '';
   document.getElementById('pedido-ubicacion-texto').textContent = '';
@@ -411,11 +453,18 @@ function confirmarPedido() {
   const cantidad = parseInt(document.getElementById('pedido-cantidad').value);
   const nota = document.getElementById('pedido-nota').value.trim();
   const negocio = document.getElementById('pedido-negocio').value.trim();
+  const telefono = document.getElementById('pedido-telefono').value.trim();
   const lat = document.getElementById('pedido-lat').value;
   const lng = document.getElementById('pedido-lng').value;
   if (!item) return;
+  if (usuarioActual.rol === 'cliente' && tienePedidoPendiente()) {
+    toast('⏳ Ya tienes un pedido pendiente de confirmar.');
+    document.getElementById('modal-pedido').classList.remove('visible');
+    return;
+  }
   if (isNaN(cantidad) || cantidad <= 0) return toast('⚠️ Ingresa una cantidad válida.');
-  if (cantidad > item.cantidad) return toast('❌ Solo hay ' + item.cantidad + ' disponibles.');
+  const { disponible } = disponibilidadReal(item);
+  if (cantidad > disponible) return toast('❌ Esos productos ya fueron pedidos por otra persona y están pendientes de confirmar. Disponibles reales: ' + disponible + '.');
 
   const pedido = {
     productoKey: key,
@@ -424,6 +473,7 @@ function confirmarPedido() {
     cantidad: cantidad,
     nota: nota,
     negocio: negocio,
+    telefono: telefono,
     usuarioNombre: usuarioActual.nombre,
     usuarioUid: usuarioActual._key,
     estado: 'pendiente',
@@ -468,6 +518,7 @@ function vistaPedidos() {
           '<div class="card-price">'+fechaTxt+'</div>'+
           etiquetas[p.estado]+
           (p.lat && p.lng ? ' <a href="https://www.google.com/maps?q='+p.lat+','+p.lng+'" target="_blank" class="pedido-badge" style="background:#dbeafe;color:#1d4ed8;text-decoration:none">📍 Ver ubicación</a>' : '')+
+          (esAdmin && p.telefono ? ' <button class="pedido-badge" style="background:#dcfce7;color:#059669;border:none;cursor:pointer" onclick="abrirWhatsAppPorId(\''+p._key+'\')">💬 WhatsApp</button>' : '')+
           '</div>'+
           acciones+
         '</div>';
@@ -478,7 +529,26 @@ function vistaPedidos() {
 
 function cambiarEstadoPedido(key, nuevoEstado) {
   window.actualizarPedidoFirebase(key, { estado: nuevoEstado });
-  toast(nuevoEstado === 'confirmado' ? '✅ Pedido confirmado.' : '✖️ Pedido cancelado.');
+  if (nuevoEstado === 'confirmado') {
+    const p = pedidosLista.find(x => x._key === key);
+    if (p) abrirWhatsAppConfirmacion(p);
+    toast('✅ Pedido confirmado.');
+  } else {
+    toast('✖️ Pedido cancelado.');
+  }
+}
+
+function abrirWhatsAppPorId(key) {
+  const p = pedidosLista.find(x => x._key === key);
+  if (p) abrirWhatsAppConfirmacion(p);
+}
+
+function abrirWhatsAppConfirmacion(pedido) {
+  const numero = (pedido.telefono || '').replace(/\D/g, '');
+  if (!numero) { toast('⚠️ Este pedido no tiene WhatsApp guardado, avísale por otro medio.'); return; }
+  const mensaje = 'Hola ' + pedido.usuarioNombre + ', tu pedido de ' + pedido.cantidad + ' u. de ' + pedido.productoNombre +
+    ' fue confirmado ✅. En breve estará en camino / listo para recoger. ¡Gracias por tu compra en Maní García!';
+  window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent(mensaje), '_blank');
 }
 
 function entregarPedido(key) {
@@ -709,9 +779,9 @@ function vistaUsuarios() {
   if (!usuarioActual || usuarioActual.rol !== 'admin') return '<div class="empty">Sin acceso</div>';
   const filas = !usuariosLista.length ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">No hay usuarios registrados.</p>' :
   usuariosLista.map(u => {
-    const rolTxt = u.rol === 'admin' ? 'Administrador' : 'Usuario';
+    const rolTxt = u.rol === 'admin' ? 'Administrador' : (u.rol === 'cliente' ? 'Cliente' : 'Usuario');
     const estadoTxt = u.estado === 'pendiente' ? 'Pendiente' : 'Aprobado';
-    return '<div class="card"><div><div class="card-name">'+(u.usuario||u._key)+'</div><div class="card-price">'+rolTxt+' · '+estadoTxt+'</div></div>'+
+    return '<div class="card"><div><div class="card-name">'+(u.usuario||u._key)+'</div><div class="card-price">'+rolTxt+' · '+estadoTxt+(u.negocio?' · '+u.negocio:'')+'</div></div>'+
     '<div class="card-actions"><button class="btn-edit" onclick="cambiarRolUsuario(\''+u._key+'\',\''+(u.rol||'usuario')+'\')" title="Cambiar rol">🔁</button>'+
     '<button class="btn-edit" onclick="cambiarEstadoUsuario(\''+u._key+'\',\''+(u.estado||'aprobado')+'\')" title="'+(u.estado==='pendiente'?'Aprobar':'Suspender')+'">'+(u.estado==='pendiente'?'✅':'⛔')+'</button>'+
     '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')">🗑️</button></div></div>';

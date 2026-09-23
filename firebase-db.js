@@ -59,16 +59,16 @@ async function perfilSiValido(uid) {
   const snap = await get(ref(db, 'usuarios/' + uid));
   const datos = snap.val();
   if (!datos || datos.estado === 'pendiente') return null;
-  return { nombre: datos.usuario, negocio: datos.negocio || '', rol: datos.rol, _key: uid };
+  return { nombre: datos.usuario, negocio: datos.negocio || '', telefono: datos.telefono || '', rol: datos.rol, _key: uid };
 }
 
 // --- Auto-registro de clientes (catálogo público) ---
-window.registrarClienteFirebase = async function(usuario, negocio, password) {
+window.registrarClienteFirebase = async function(usuario, negocio, telefono, password) {
   const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@nexus23.local';
   const credencial = await createUserWithEmailAndPassword(auth, correoInterno, password);
   const uid = credencial.user.uid;
-  await set(ref(db, 'usuarios/' + uid), { usuario, negocio: negocio || '', rol: 'cliente', estado: 'aprobado' });
-  return { nombre: usuario, negocio: negocio || '', rol: 'cliente', _key: uid };
+  await set(ref(db, 'usuarios/' + uid), { usuario, negocio: negocio || '', telefono: telefono || '', rol: 'cliente', estado: 'aprobado' });
+  return { nombre: usuario, negocio: negocio || '', telefono: telefono || '', rol: 'cliente', _key: uid };
 };
 
 window.loginConFirebase = async function(usuario, password) {
