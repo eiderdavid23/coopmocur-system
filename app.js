@@ -543,8 +543,15 @@ function abrirWhatsAppPorId(key) {
   if (p) abrirWhatsAppConfirmacion(p);
 }
 
+function normalizarNumeroWhatsApp(telefono) {
+  let numero = (telefono || '').replace(/\D/g, '');
+  // Si parece un celular colombiano sin indicativo (10 dígitos, empieza en 3), se lo agregamos.
+  if (numero.length === 10 && numero.startsWith('3')) numero = '57' + numero;
+  return numero;
+}
+
 function abrirWhatsAppConfirmacion(pedido) {
-  const numero = (pedido.telefono || '').replace(/\D/g, '');
+  const numero = normalizarNumeroWhatsApp(pedido.telefono);
   if (!numero) { toast('⚠️ Este pedido no tiene WhatsApp guardado, avísale por otro medio.'); return; }
   const mensaje = 'Hola ' + pedido.usuarioNombre + ', tu pedido de ' + pedido.cantidad + ' u. de ' + pedido.productoNombre +
     ' fue confirmado ✅. En breve estará en camino / listo para recoger. ¡Gracias por tu compra en Maní García!';
