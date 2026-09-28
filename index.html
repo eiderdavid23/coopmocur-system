@@ -222,6 +222,26 @@
   </div>
 </div>
 
+<!-- DETALLE DE PRODUCTO (estilo Temu) -->
+<div class="detalle-overlay" id="modal-detalle-producto">
+  <div class="detalle-top">
+    <button class="detalle-back" onclick="cerrarDetalleProducto()" aria-label="Volver">←</button>
+    <span>Detalle del producto</span>
+  </div>
+  <div class="detalle-scroll" id="detalle-scroll">
+    <div class="detalle-imagen" id="detalle-imagen"></div>
+    <div class="detalle-info" id="detalle-info"></div>
+  </div>
+  <div class="detalle-bar" id="detalle-bar"></div>
+</div>
+
+<!-- VISOR DE IMAGEN CON ZOOM -->
+<div class="visor" id="visor-imagen">
+  <button class="visor-x" onclick="cerrarVisorImagen()" aria-label="Cerrar">✕</button>
+  <div class="visor-caja" id="visor-caja"><img id="visor-img" alt="" draggable="false"></div>
+  <div class="visor-hint">Pellizca o toca dos veces para hacer zoom</div>
+</div>
+
 <div id="toast"></div>
 
   <script src="app.js"></script>

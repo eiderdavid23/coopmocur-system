@@ -9,6 +9,8 @@ let pedidosLista=[];
 let _escuchandoPedidos=false;
 let pedidoPendientePreLogin=null;
 
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
 function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
@@ -39,7 +41,7 @@ function modalPrompt({ titulo, campos, textoAceptar }) {
           (c.options || []).map(o => '<option value="' + o.value + '"' + (o.value === c.value ? ' selected' : '') + '>' + o.label + '</option>').join('') +
           '</select>';
       } else {
-        wrap.innerHTML = '<label class="form-label">' + c.label + '</label><input type="' + (c.type || 'text') + '" id="gc-' + c.id + '" class="form-input" value="' + (c.value !== undefined && c.value !== null ? c.value : '') + '">';
+        wrap.innerHTML = '<label class="form-label">' + c.label + '</label><input type="' + (c.type || 'text') + '" id="gc-' + c.id + '" class="form-input" value="' + esc(c.value !== undefined && c.value !== null ? c.value : '') + '">';
       }
       camposEl.appendChild(wrap);
     });
@@ -166,14 +168,8 @@ function renderizarCatalogoPublico() {
     c.innerHTML = '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🥜</div><p style="font-size:0.9rem">Aún no hay productos en el catálogo.</p></div>';
     return;
   }
-  c.innerHTML = '<div class="fade"><div class="section-title" style="margin-bottom:4px">🛒 Nuestro catálogo</div><div class="section-sub">Inicia sesión o crea una cuenta para pedir</div>'+
-  inventario.map(r => {
-    const agotado = r.cantidad <= 0;
-    return '<div class="card catalogo-card"><div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0">'+miniaturaProducto(r)+
-    '<div style="min-width:0"><div class="card-name">'+r.nombre+'</div><div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div><span class="badge '+(agotado?'badge-bajo':'badge-ok')+'">'+(agotado?'Agotado':'Disponibles: '+r.cantidad)+'</span></div></div>'+
-    (agotado ? '<button class="btn btn-gray" disabled>Agotado</button>' : '<button class="btn btn-green" onclick="pedirComoInvitado(\''+r._key+'\')">Pedir</button>')+
-    '</div>';
-  }).join('') + '</div>';
+  c.innerHTML = '<div class="fade"><div class="section-title" style="margin-bottom:4px">🛒 Nuestro catálogo</div><div class="section-sub">Toca un producto para verlo. Inicia sesión o crea una cuenta para pedir</div>'+
+  '<div class="grid-catalogo">'+inventario.map(r => tarjetaProductoTemu(r, true, false)).join('')+'</div></div>';
 }
 
 async function intentarLogin() {
@@ -271,6 +267,7 @@ function iniciarApp() {
         tabPedidos.textContent = '🧾 PEDIDOS' + (pendientes > 0 ? ' (' + pendientes + ')' : '');
       }
       if (pestanaActual === 'PEDIDOS' || pestanaActual === 'CATALOGO') renderizar();
+      if (_detalleKey) renderDetalleProducto();
     });
   }
 
@@ -375,7 +372,7 @@ function filtrarStock() {
   document.getElementById('lista-stock').innerHTML = generarListaStock(inventario.filter(r=>r.nombre.toLowerCase().includes(b)));
 }
 
-// --- Catálogo (para hacer pedidos) ---
+// --- Catálogo estilo Temu (para hacer pedidos) ---
 function vistaCatalogo() {
   const bloqueado = usuarioActual.rol === 'cliente' && tienePedidoPendiente();
   const aviso = bloqueado
@@ -387,26 +384,173 @@ function vistaCatalogo() {
     '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🥜</div><p style="font-size:0.9rem">Aún no hay productos en el catálogo.</p></div></div>';
   }
 
-  const filas = inventario.map(r => {
-    const { estado, disponible } = disponibilidadReal(r);
-    const puedePedir = estado === 'disponible' && !bloqueado;
-    let etiqueta, claseBadge, textoBoton;
-    if (estado === 'agotado') { etiqueta = 'Agotado'; claseBadge = 'badge-bajo'; textoBoton = 'Agotado'; }
-    else if (estado === 'reservado') { etiqueta = 'Reservado (pendiente por confirmar)'; claseBadge = ''; textoBoton = 'Reservado'; }
-    else { etiqueta = 'Disponibles: ' + disponible; claseBadge = 'badge-ok'; textoBoton = 'Pedir'; }
-
-    return '<div class="card catalogo-card">'+
-      '<div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0">'+miniaturaProducto(r)+
-      '<div style="min-width:0"><div class="card-name">'+r.nombre+'</div>'+
-      '<div class="card-price">Precio: <span>$'+Number(r.precio).toLocaleString()+'</span></div>'+
-      '<span class="badge '+claseBadge+'" style="'+(estado==='reservado'?'background:#fef3c7;color:#92400e':'')+'">'+etiqueta+'</span></div></div>'+
-      (puedePedir
-        ? '<button class="btn btn-green" onclick="abrirModalPedido(\''+r._key+'\')">Pedir</button>'
-        : '<button class="btn btn-gray" disabled>'+textoBoton+'</button>')+
-    '</div>';
-  }).join('');
-  return '<div class="fade"><div class="top-bar"><div><div class="section-title">🛒 CATÁLOGO</div><div class="section-sub">Elige un producto y haz tu pedido</div></div></div>'+aviso+'<div id="lista-catalogo">'+filas+'</div></div>';
+  return '<div class="fade"><div class="top-bar"><div><div class="section-title">🛒 CATÁLOGO</div><div class="section-sub">Toca un producto para verlo en detalle</div></div></div>'+aviso+
+    '<div class="grid-catalogo" id="lista-catalogo">'+inventario.map(r => tarjetaProductoTemu(r, false, bloqueado)).join('')+'</div></div>';
 }
+
+// Estado de un producto según si es vista pública o con sesión
+function estadoProductoCatalogo(r, publico) {
+  if (publico) {
+    if (r.cantidad <= 0) return { estado: 'agotado', disponible: 0 };
+    return { estado: 'disponible', disponible: r.cantidad };
+  }
+  return disponibilidadReal(r);
+}
+
+function tarjetaProductoTemu(r, publico, bloqueado) {
+  const { estado, disponible } = estadoProductoCatalogo(r, publico);
+  const puedePedir = estado === 'disponible' && !bloqueado;
+  const img = r.imagen
+    ? '<img src="'+r.imagen+'" alt="'+esc(r.nombre)+'" loading="lazy">'
+    : '<div class="tile-ph">🥜</div>';
+  let flag = '';
+  if (estado === 'agotado') flag = '<span class="tile-flag tile-flag-rojo">Agotado</span>';
+  else if (estado === 'reservado') flag = '<span class="tile-flag tile-flag-amarillo">Reservado</span>';
+  const stockTxt = estado === 'disponible' ? 'Disponibles: ' + disponible : (estado === 'agotado' ? 'Sin stock' : 'Pendiente por confirmar');
+  const accion = publico ? "pedirComoInvitado('"+r._key+"')" : "abrirModalPedido('"+r._key+"')";
+  return '<div class="tile" onclick="abrirDetalleProducto(\''+r._key+'\','+(publico?'true':'false')+')">'+
+    '<div class="tile-img">'+img+flag+'</div>'+
+    '<div class="tile-body">'+
+      '<div class="tile-name">'+esc(r.nombre)+'</div>'+
+      '<div class="tile-row"><div><div class="tile-price">$'+Number(r.precio).toLocaleString()+'</div><div class="tile-stock">'+stockTxt+'</div></div>'+
+      '<button class="tile-add" '+(puedePedir?'':'disabled ')+'onclick="event.stopPropagation();'+accion+'" aria-label="Pedir">＋</button></div>'+
+    '</div></div>';
+}
+
+// --- Detalle de producto (estilo Temu) ---
+let _detalleKey = null, _detallePublico = false;
+
+function abrirDetalleProducto(key, publico) {
+  const r = inventario.find(x => x._key === key);
+  if (!r) return;
+  _detalleKey = key; _detallePublico = !!publico;
+  renderDetalleProducto();
+  document.getElementById('modal-detalle-producto').classList.add('visible');
+  document.getElementById('detalle-scroll').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+
+function renderDetalleProducto() {
+  const r = inventario.find(x => x._key === _detalleKey);
+  if (!r) { cerrarDetalleProducto(); return; }
+  const publico = _detallePublico;
+  const bloqueado = !publico && usuarioActual && usuarioActual.rol === 'cliente' && tienePedidoPendiente();
+  const { estado, disponible } = estadoProductoCatalogo(r, publico);
+  document.getElementById('detalle-imagen').innerHTML = r.imagen
+    ? '<img src="'+r.imagen+'" alt="'+esc(r.nombre)+'" onclick="abrirVisorImagen()"><div class="detalle-zoom-chip">🔍 Toca para ampliar</div>'
+    : '<div class="tile-ph" style="font-size:5rem">🥜</div>';
+  let badge;
+  if (estado === 'disponible') badge = '<span class="badge badge-ok">Disponibles: '+disponible+'</span>';
+  else if (estado === 'agotado') badge = '<span class="badge badge-bajo">Agotado</span>';
+  else badge = '<span class="badge" style="background:#fef3c7;color:#92400e">Reservado (pendiente por confirmar)</span>';
+  document.getElementById('detalle-info').innerHTML =
+    '<div class="detalle-precio">$'+Number(r.precio).toLocaleString()+' <small>c/u</small></div>'+
+    '<div class="detalle-nombre">'+esc(r.nombre)+'</div>'+
+    '<div style="margin:10px 0 14px">'+badge+'</div>'+
+    '<div class="detalle-garantias"><span>🥜 Calidad superior</span><span>📍 Puedes enviar tu ubicación</span><span>💬 Te avisamos por WhatsApp</span></div>'+
+    (bloqueado ? '<div class="empty" style="background:#fff7ed;border-color:#fdba74;color:#c2410c;margin-top:14px;padding:12px;font-size:0.8rem">⏳ Ya tienes un pedido pendiente de confirmar.</div>' : '');
+  const puedePedir = estado === 'disponible' && !bloqueado;
+  document.getElementById('detalle-bar').innerHTML = puedePedir
+    ? '<button class="btn btn-green btn-full" onclick="pedirDesdeDetalle()">🛒 Pedir ahora</button>'
+    : '<button class="btn btn-gray btn-full" disabled>'+(estado==='agotado'?'Agotado':(estado==='reservado'?'Reservado':'No disponible por ahora'))+'</button>';
+}
+
+function cerrarDetalleProducto() {
+  cerrarVisorImagen();
+  document.getElementById('modal-detalle-producto').classList.remove('visible');
+  document.body.style.overflow = '';
+  _detalleKey = null;
+}
+
+function pedirDesdeDetalle() {
+  const key = _detalleKey, publico = _detallePublico;
+  cerrarDetalleProducto();
+  if (publico) pedirComoInvitado(key);
+  else abrirModalPedido(key);
+}
+
+// --- Visor de imagen con zoom (pellizcar, doble toque, arrastrar, rueda) ---
+const _zoom = { scale: 1, x: 0, y: 0, punteros: new Map(), distIni: 0, escalaIni: 1, ultimoToque: 0, movido: false };
+
+function abrirVisorImagen() {
+  const r = inventario.find(x => x._key === _detalleKey);
+  if (!r || !r.imagen) return;
+  const img = document.getElementById('visor-img');
+  img.src = r.imagen;
+  _zoom.scale = 1; _zoom.x = 0; _zoom.y = 0; _zoom.punteros.clear();
+  document.getElementById('visor-imagen').classList.add('visible');
+  aplicarZoom();
+}
+
+function cerrarVisorImagen() {
+  const v = document.getElementById('visor-imagen');
+  if (v) v.classList.remove('visible');
+}
+
+function aplicarZoom() {
+  const img = document.getElementById('visor-img');
+  const caja = document.getElementById('visor-caja');
+  const maxX = Math.max(0, (img.clientWidth * _zoom.scale - caja.clientWidth) / 2);
+  const maxY = Math.max(0, (img.clientHeight * _zoom.scale - caja.clientHeight) / 2);
+  _zoom.x = Math.min(maxX, Math.max(-maxX, _zoom.x));
+  _zoom.y = Math.min(maxY, Math.max(-maxY, _zoom.y));
+  img.style.transform = 'translate('+_zoom.x+'px,'+_zoom.y+'px) scale('+_zoom.scale+')';
+}
+
+function distanciaPunteros() {
+  const p = Array.from(_zoom.punteros.values());
+  return Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+}
+
+function iniciarZoomVisor() {
+  const caja = document.getElementById('visor-caja');
+  caja.addEventListener('pointerdown', (e) => {
+    caja.setPointerCapture(e.pointerId);
+    _zoom.punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    _zoom.movido = false;
+    if (_zoom.punteros.size === 2) { _zoom.distIni = distanciaPunteros(); _zoom.escalaIni = _zoom.scale; }
+  });
+  caja.addEventListener('pointermove', (e) => {
+    const p = _zoom.punteros.get(e.pointerId);
+    if (!p) return;
+    if (_zoom.punteros.size === 2) {
+      p.x = e.clientX; p.y = e.clientY;
+      _zoom.scale = Math.min(5, Math.max(1, _zoom.escalaIni * distanciaPunteros() / _zoom.distIni));
+      _zoom.movido = true;
+      aplicarZoom();
+    } else if (_zoom.scale > 1) {
+      _zoom.x += e.clientX - p.x; _zoom.y += e.clientY - p.y;
+      if (Math.abs(e.clientX - p.x) + Math.abs(e.clientY - p.y) > 2) _zoom.movido = true;
+      p.x = e.clientX; p.y = e.clientY;
+      aplicarZoom();
+    }
+  });
+  const soltar = (e) => {
+    const eraUno = _zoom.punteros.size === 1;
+    _zoom.punteros.delete(e.pointerId);
+    if (_zoom.scale <= 1.02) { _zoom.scale = 1; _zoom.x = 0; _zoom.y = 0; aplicarZoom(); }
+    if (eraUno && !_zoom.movido && e.type === 'pointerup') {
+      const ahora = Date.now();
+      if (ahora - _zoom.ultimoToque < 300) {
+        _zoom.scale = _zoom.scale > 1 ? 1 : 2.5;
+        _zoom.x = 0; _zoom.y = 0;
+        aplicarZoom();
+        _zoom.ultimoToque = 0;
+      } else {
+        _zoom.ultimoToque = ahora;
+      }
+    }
+  };
+  caja.addEventListener('pointerup', soltar);
+  caja.addEventListener('pointercancel', soltar);
+  caja.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    _zoom.scale = Math.min(5, Math.max(1, _zoom.scale * (e.deltaY < 0 ? 1.15 : 0.87)));
+    if (_zoom.scale === 1) { _zoom.x = 0; _zoom.y = 0; }
+    aplicarZoom();
+  }, { passive: false });
+}
+window.addEventListener('load', iniciarZoomVisor);
 
 function abrirModalPedido(key) {
   if (usuarioActual.rol === 'cliente' && tienePedidoPendiente()) {
@@ -732,32 +876,6 @@ function procesarGuardarPieza() {
   const cantidad=parseInt(document.getElementById('ins-cantidad').value);
   const imagen=document.getElementById('ins-imagen').value || '';
   if (!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena todos los campos.');
-  window.guardarEnFirebase({nombre,precio,precioCompra,cantidad,imagen});
-  cerrarModalAgregar();
-}
-
-function abrirModalEditar(key) {
-  const item=inventario.find(r=>r._key===key);
-  if (!item) return;
-  document.getElementById('edit-key').value=key;
-  document.getElementById('edit-nombre').value=item.nombre;
-  document.getElementById('edit-precio').value=item.precio;
-  document.getElementById('edit-preciocompra').value=item.precioCompra||0;
-  document.getElementById('edit-cantidad').value=item.cantidad;
-  document.getElementById('edit-imagen').value=item.imagen||'';
-  const preview=document.getElementById('edit-imagen-preview');
-  if (item.imagen) { preview.src=item.imagen; preview.style.display='block'; } else { preview.style.display='none'; }
-  document.getElementById('modal-editar').classList.add('visible');
-}
-function cerrarModalEditar() { document.getElementById('modal-editar').classList.remove('visible'); }
-function procesarEditarPieza() {
-  const key=document.getElementById('edit-key').value;
-  const nombre=document.getElementById('edit-nombre').value.trim();
-  const precio=parseFloat(document.getElementById('edit-precio').value);
-  const precioCompra=parseFloat(document.getElementById('edit-preciocompra').value)||0;
-  const cantidad=parseInt(document.getElementById('edit-cantidad').value);
-  const imagen=document.getElementById('edit-imagen').value || '';
-  if (!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena todos los campos.');
   window.actualizarEnFirebase(key,{nombre,precio,precioCompra,cantidad,imagen});
   cerrarModalEditar();
 }
@@ -779,23 +897,39 @@ window.actualizarInventarioDesdeFirebase=function(lista){
   inventario=lista;
   if (usuarioActual) renderizar();
   else renderizarCatalogoPublico();
+  if (_detalleKey) renderDetalleProducto();
 };
 
 // --- Gestión de usuarios (solo admin) ---
 function vistaUsuarios() {
   if (!usuarioActual || usuarioActual.rol !== 'admin') return '<div class="empty">Sin acceso</div>';
-  const filas = !usuariosLista.length ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">No hay usuarios registrados.</p>' :
-  usuariosLista.map(u => {
+  const q = (window._filtroUsuarios || '').toLowerCase();
+  const lista = usuariosLista.filter(u => !q || [u.usuario, u.negocio, u.telefono, u.rol].join(' ').toLowerCase().includes(q));
+  const filas = !lista.length ? '<p style="padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem">'+(usuariosLista.length?'Sin resultados.':'No hay usuarios registrados.')+'</p>' :
+  lista.map(u => {
     const rolTxt = u.rol === 'admin' ? 'Administrador' : (u.rol === 'cliente' ? 'Cliente' : 'Usuario');
     const estadoTxt = u.estado === 'pendiente' ? 'Pendiente' : 'Aprobado';
-    return '<div class="card"><div><div class="card-name">'+(u.usuario||u._key)+'</div><div class="card-price">'+rolTxt+' · '+estadoTxt+(u.negocio?' · '+u.negocio:'')+'</div></div>'+
-    '<div class="card-actions"><button class="btn-edit" onclick="cambiarRolUsuario(\''+u._key+'\',\''+(u.rol||'usuario')+'\')" title="Cambiar rol">🔁</button>'+
+    const esYo = u._key === usuarioActual._key;
+    return '<div class="card"><div style="min-width:0"><div class="card-name">'+esc(u.usuario||u._key)+(esYo?' (tú)':'')+'</div>'+
+    '<div class="card-price">'+rolTxt+' · '+estadoTxt+'</div>'+
+    (u.negocio?'<div class="card-price">🏬 '+esc(u.negocio)+'</div>':'')+
+    (u.telefono?'<div class="card-price">📱 '+esc(u.telefono)+'</div>':'')+'</div>'+
+    '<div class="card-actions"><button class="btn-edit" onclick="editarUsuario(\''+u._key+'\')" title="Editar">✏️</button>'+
     '<button class="btn-edit" onclick="cambiarEstadoUsuario(\''+u._key+'\',\''+(u.estado||'aprobado')+'\')" title="'+(u.estado==='pendiente'?'Aprobar':'Suspender')+'">'+(u.estado==='pendiente'?'✅':'⛔')+'</button>'+
-    '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')">🗑️</button></div></div>';
+    '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')" title="Eliminar">🗑️</button></div></div>';
   }).join('');
   return '<div class="fade"><div class="top-bar"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div></div>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-gray" onclick="configurarMiTelegram()">🔔 Mi Telegram</button><button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div></div>'+
+  '<input type="text" class="search" id="buscar-usuarios" placeholder="🔍 Buscar por nombre, negocio o teléfono..." value="'+esc(window._filtroUsuarios||'')+'" oninput="filtrarUsuarios(this.value)">'+
   '<div id="lista-usuarios">'+filas+'</div></div>';
+}
+
+function filtrarUsuarios(valor) {
+  window._filtroUsuarios = valor;
+  const pos = valor.length;
+  renderizar();
+  const inp = document.getElementById('buscar-usuarios');
+  if (inp) { inp.focus(); inp.setSelectionRange(pos, pos); }
 }
 
 async function configurarMiTelegram() {
@@ -857,4 +991,37 @@ async function abrirCrearUsuario() {
       if (err.code === 'auth/email-already-in-use') toast('❌ Ese usuario ya existe.');
       else toast('❌ Error al crear el usuario.');
     });
+}
+
+// U del CRUD: editar datos de un usuario
+async function editarUsuario(uid) {
+  const u = usuariosLista.find(x => x._key === uid);
+  if (!u) return;
+  const esYo = uid === usuarioActual._key;
+  const campos = [
+    { id: 'negocio', label: 'Nombre del negocio', value: u.negocio || '' },
+    { id: 'telefono', label: 'WhatsApp / teléfono', value: u.telefono || '' }
+  ];
+  if (!esYo) {
+    campos.push({ id: 'rol', label: 'Tipo de cuenta', type: 'select', value: u.rol || 'usuario', options: [
+      { value: 'cliente', label: 'Cliente' },
+      { value: 'usuario', label: 'Usuario normal' },
+      { value: 'admin', label: 'Administrador' }
+    ]});
+    campos.push({ id: 'estado', label: 'Estado', type: 'select', value: u.estado || 'aprobado', options: [
+      { value: 'aprobado', label: 'Aprobado' },
+      { value: 'pendiente', label: 'Pendiente / suspendido' }
+    ]});
+  }
+  const r = await modalPrompt({ titulo: '✏️ Editar: ' + (u.usuario || uid), textoAceptar: 'Guardar', campos });
+  if (!r) return;
+  const cambios = { negocio: r.negocio, telefono: r.telefono };
+  if (!esYo) { cambios.rol = r.rol; cambios.estado = r.estado; }
+  try {
+    await window.actualizarUsuarioFirebase(uid, cambios);
+    toast('✅ Usuario actualizado.');
+  } catch (err) {
+    console.error(err);
+    toast('❌ No se pudo actualizar el usuario.');
+  }
 }
