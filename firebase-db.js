@@ -3,14 +3,14 @@ import { getDatabase, ref, push, set, remove, update, onValue, get } from "https
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCAq0QNY7tE1td489ZakrVKjTg6iRe5nyc",
-  authDomain: "nexus23-7f041.firebaseapp.com",
-  databaseURL: "https://nexus23-7f041-default-rtdb.firebaseio.com",
-  projectId: "nexus23-7f041",
-  storageBucket: "nexus23-7f041.firebasestorage.app",
-  messagingSenderId: "231907744812",
-  appId: "1:231907744812:web:98be1a8a497abb151ac589",
-  measurementId: "G-LDVBX9VQYC"
+  apiKey: "AIzaSyCM64Ulnhcq4v6x7u_vvAdM9aJx5UswpPA",
+  authDomain: "mani-garcia.firebaseapp.com",
+  databaseURL: "https://mani-garcia-default-rtdb.firebaseio.com",
+  projectId: "mani-garcia",
+  storageBucket: "mani-garcia.firebasestorage.app",
+  messagingSenderId: "972544162856",
+  appId: "1:972544162856:web:d81f315844e0aae849c91d",
+  measurementId: "G-B93SWZ447K"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -64,7 +64,7 @@ async function perfilSiValido(uid) {
 
 // --- Auto-registro de clientes (catálogo público) ---
 window.registrarClienteFirebase = async function(usuario, negocio, telefono, password) {
-  const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@nexus23.local';
+  const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@mani-garcia.local';
   const credencial = await createUserWithEmailAndPassword(auth, correoInterno, password);
   const uid = credencial.user.uid;
   await set(ref(db, 'usuarios/' + uid), { usuario, negocio: negocio || '', telefono: telefono || '', rol: 'cliente', estado: 'aprobado' });
@@ -72,7 +72,7 @@ window.registrarClienteFirebase = async function(usuario, negocio, telefono, pas
 };
 
 window.loginConFirebase = async function(usuario, password) {
-  const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@nexus23.local';
+  const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@mani-garcia.local';
   try {
     const credencial = await signInWithEmailAndPassword(auth, correoInterno, password);
     const perfil = await perfilSiValido(credencial.user.uid);
@@ -131,7 +131,7 @@ window.cargarHistorialDesdeFirebase = function(callback) {
   });
 };
 
-// --- Gestión de usuarios (misma tabla 'usuarios' que NEXUS23) ---
+// --- Gestión de usuarios (tabla 'usuarios') ---
 window.escucharUsuarios = function(callback) {
   onValue(usuariosRef, (snapshot) => {
     callback(snapshot.val() || {});
@@ -150,7 +150,7 @@ function obtenerAuthSecundaria() {
 }
 
 window.crearUsuarioAdminFirebase = async function(usuario, password, rol) {
-  const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@nexus23.local';
+  const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@mani-garcia.local';
   const authSecundaria = obtenerAuthSecundaria();
   const credencial = await createUserWithEmailAndPassword(authSecundaria, correoInterno, password);
   const uid = credencial.user.uid;
