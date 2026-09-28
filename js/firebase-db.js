@@ -59,7 +59,7 @@ async function perfilSiValido(uid) {
   const snap = await get(ref(db, 'usuarios/' + uid));
   const datos = snap.val();
   if (!datos || datos.estado === 'pendiente') return null;
-  return { nombre: datos.usuario, negocio: datos.negocio || '', telefono: datos.telefono || '', rol: datos.rol, _key: uid };
+  return { nombre: datos.usuario, negocio: datos.negocio || '', telefono: datos.telefono || '', rol: datos.rol, aceptoTerminos: !!datos.aceptoTerminos, _key: uid };
 }
 
 // --- Auto-registro de clientes (catálogo público) ---
@@ -67,8 +67,8 @@ window.registrarClienteFirebase = async function(usuario, negocio, telefono, pas
   const correoInterno = usuario.toLowerCase().replace(/\s+/g, '') + '@mani-garcia.local';
   const credencial = await createUserWithEmailAndPassword(auth, correoInterno, password);
   const uid = credencial.user.uid;
-  await set(ref(db, 'usuarios/' + uid), { usuario, negocio: negocio || '', telefono: telefono || '', rol: 'cliente', estado: 'aprobado' });
-  return { nombre: usuario, negocio: negocio || '', telefono: telefono || '', rol: 'cliente', _key: uid };
+  await set(ref(db, 'usuarios/' + uid), { usuario, negocio: negocio || '', telefono: telefono || '', rol: 'cliente', estado: 'aprobado', aceptoTerminos: true, versionTerminos: '1.0', fechaAceptacion: Date.now() });
+  return { nombre: usuario, negocio: negocio || '', telefono: telefono || '', rol: 'cliente', aceptoTerminos: true, _key: uid };
 };
 
 window.loginConFirebase = async function(usuario, password) {
@@ -88,6 +88,10 @@ window.loginConFirebase = async function(usuario, password) {
     console.error('Login error:', e);
     return null;
   }
+};
+
+window.aceptarTerminosFirebase = function(uid) {
+  return update(ref(db, 'usuarios/' + uid), { aceptoTerminos: true, versionTerminos: '1.0', fechaAceptacion: Date.now() });
 };
 
 window.cerrarSesionFirebase = function() {

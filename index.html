@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Maní García</title>
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#5c3a1e">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
 <div id="pantalla-catalogo-publico" style="display:none">
   <div class="header">
     <div class="header-left">
-        <img class="header-logo" src="logo.png" alt="Maní García">
+        <img class="header-logo" src="img/logo.png" alt="Maní García">
         <div><h1>MANÍ GARCÍA</h1>
         <p>MANÍ CONFITADO DE CALIDAD SUPERIOR</p></div>
     </div>
@@ -40,7 +40,7 @@
   <div class="login-bg">
     <div class="login-box">
       <div class="login-logo">
-        <img class="login-img" src="logo.png" alt="Maní García">
+        <img class="login-img" src="img/logo.png" alt="Maní García">
       </div>
       <div class="login-divider"></div>
 
@@ -78,6 +78,7 @@
           <div class="field-label"><span>🔒</span> Contraseña</div>
           <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" class="field-input">
         </div>
+        <label class="terminos-check"><input type="checkbox" id="reg-terminos"><span>He leído y acepto los <a href="#" onclick="abrirTerminos();return false">Términos y Condiciones</a> y la <a href="#" onclick="abrirTerminos();return false">Política de Tratamiento de Datos Personales</a>, y autorizo el tratamiento de mis datos.</span></label>
         <button class="login-btn" id="registro-btn" onclick="intentarRegistroCliente()">
           <span>→</span> Crear cuenta
         </button>
@@ -93,7 +94,7 @@
 <div id="pantalla-app" style="display:none">
   <div class="header">
     <div class="header-left">
-        <img class="header-logo" src="logo.png" alt="Maní García">
+        <img class="header-logo" src="img/logo.png" alt="Maní García">
         <div><h1>MANÍ GARCÍA</h1>
         <p>MANÍ CONFITADO DE CALIDAD SUPERIOR</p></div>
     </div>
@@ -206,6 +207,76 @@
   </div>
 </div>
 
+<!-- MODAL ACEPTACION OBLIGATORIA (usuarios existentes) -->
+<div class="modal-overlay" id="modal-aceptar-terminos">
+  <div class="modal" style="text-align:center">
+    <h3 style="margin-bottom:8px">📄 Términos y Condiciones</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:14px">Para seguir usando la aplicación debes aceptar nuestros <a href="#" onclick="abrirTerminos();return false" style="color:#5c3a1e;font-weight:700">Términos y Condiciones</a> y la <a href="#" onclick="abrirTerminos();return false" style="color:#5c3a1e;font-weight:700">Política de Tratamiento de Datos Personales</a>.</p>
+    <div class="btn-row">
+      <button class="btn btn-gray" onclick="rechazarTerminos()">No acepto</button>
+      <button class="btn btn-blue" onclick="confirmarAceptacionTerminos()">Acepto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TERMINOS Y HABEAS DATA -->
+<div class="modal-overlay" id="modal-terminos">
+  <div class="modal terminos-modal">
+    <h3>📄 Términos y Condiciones</h3>
+    <div class="terminos-texto">
+      <p><em>Última actualización: septiembre de 2026</em></p>
+
+      <h4>1. Quiénes somos</h4>
+      <p>Maní García ("nosotros") es un negocio de venta de maní confitado ubicado en Curumani, Colombia. Esta aplicación permite ver el catálogo y hacer pedidos. Contacto: eiderdavidgarcia23@gmail.com.</p>
+
+      <h4>2. Uso de la aplicación</h4>
+      <p>Para pedir debes crear una cuenta con datos verdaderos. Eres responsable de tu usuario y contraseña y de lo que se haga con ellos. No debes usar la aplicación para fines ilegales ni intentar acceder a información de otros usuarios.</p>
+
+      <h4>3. Pedidos, precios y entregas</h4>
+      <p>Los pedidos quedan sujetos a la disponibilidad de producto. Los precios se muestran en pesos colombianos y pueden cambiar sin previo aviso. Un pedido se considera confirmado cuando nosotros te lo confirmemos, normalmente por WhatsApp. Las condiciones de entrega y pago se acuerdan contigo al confirmar.</p>
+
+      <h4>4. Propiedad intelectual</h4>
+      <p>El nombre, logo, fotos y contenido de la aplicación pertenecen a Maní García. No se pueden copiar ni usar sin autorización.</p>
+
+      <h4>5. Cambios</h4>
+      <p>Podemos actualizar estos términos. La versión vigente es la publicada en la aplicación.</p>
+
+      <h4>6. Ley aplicable</h4>
+      <p>Estos términos se rigen por las leyes de la República de Colombia.</p>
+
+      <h3 style="margin-top:18px">🔐 Política de Tratamiento de Datos Personales (Habeas Data)</h3>
+
+      <h4>Marco legal</h4>
+      <p>Esta política se basa en el artículo 15 de la Constitución Política de Colombia, la Ley 1581 de 2012 (protección de datos personales), el Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015) y la Ley 1266 de 2008 en lo que aplique.</p>
+
+      <h4>Responsable del tratamiento</h4>
+      <p>Maní García, Curumani. Correo: eiderdavidgarcia23@gmail.com.</p>
+
+      <h4>Datos que recolectamos</h4>
+      <p>Nombre, nombre del negocio (opcional), número de WhatsApp, usuario y contraseña (la contraseña se almacena cifrada por el proveedor de autenticación), datos de tus pedidos y, si tú lo autorizas al pedir, tu ubicación de entrega. No recolectamos datos sensibles ni datos de menores de edad.</p>
+
+      <h4>Finalidades</h4>
+      <p>Crear y administrar tu cuenta, gestionar y entregar tus pedidos, contactarte por WhatsApp sobre tus pedidos, llevar el control de ventas y cumplir obligaciones legales.</p>
+
+      <h4>Almacenamiento y terceros</h4>
+      <p>Tus datos se guardan en servicios de Google Firebase, que pueden operar en servidores fuera de Colombia. No vendemos ni compartimos tus datos con terceros para publicidad.</p>
+
+      <h4>Tus derechos como titular</h4>
+      <p>Puedes conocer, actualizar y rectificar tus datos; solicitar prueba de la autorización que diste; ser informado del uso que se les da; presentar quejas ante la Superintendencia de Industria y Comercio (SIC); revocar la autorización y/o solicitar la supresión de tus datos cuando no se respeten los principios y garantías legales; y acceder gratuitamente a tus datos.</p>
+
+      <h4>Cómo ejercer tus derechos</h4>
+      <p>Escríbenos a eiderdavidgarcia23@gmail.com indicando tu nombre y usuario. Atendemos consultas en máximo 10 días hábiles y reclamos en máximo 15 días hábiles, conforme a la Ley 1581 de 2012.</p>
+
+      <h4>Autorización</h4>
+      <p>Al marcar la casilla de aceptación al crear tu cuenta, declaras que leíste estos términos y esta política y autorizas de manera previa, expresa e informada el tratamiento de tus datos personales para las finalidades descritas.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gray" onclick="cerrarTerminos()">Cerrar</button>
+      <button class="btn btn-blue" onclick="aceptarTerminosModal()">Acepto</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GENÉRICO DE FORMULARIO (reemplaza prompt()) -->
 <div class="modal-overlay" id="modal-generico">
   <div class="modal">
@@ -253,7 +324,7 @@
 
 <div id="toast"></div>
 
-  <script src="app.js"></script>
-<script type="module" src="firebase-db.js"></script>
+  <script src="js/app.js"></script>
+<script type="module" src="js/firebase-db.js"></script>
 </body>
 </html>

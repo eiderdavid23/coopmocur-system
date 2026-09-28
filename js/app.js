@@ -209,6 +209,7 @@ async function intentarRegistroCliente() {
   err.style.display = 'none';
   if (!usuario || !password) { toast('⚠️ Ingresa tu nombre y una contraseña.'); return; }
   if (password.length < 6) { toast('⚠️ La contraseña debe tener al menos 6 caracteres.'); return; }
+  if (!document.getElementById('reg-terminos').checked) { toast('⚠️ Debes aceptar los Términos y Condiciones y el tratamiento de datos.'); return; }
   btn.textContent = 'Creando cuenta...';
   btn.disabled = true;
   try {
@@ -230,6 +231,9 @@ document.addEventListener('keydown', e => {
 });
 
 function iniciarApp() {
+  if (usuarioActual && !usuarioActual.aceptoTerminos) {
+    document.getElementById('modal-aceptar-terminos').classList.add('visible');
+  }
   document.getElementById('pantalla-catalogo-publico').style.display = 'none';
   document.getElementById('pantalla-login').style.display = 'none';
   document.getElementById('pantalla-app').style.display = 'block';
@@ -1050,4 +1054,29 @@ function procesarEditarPieza() {
   window.actualizarEnFirebase(key,{nombre,precio,cantidad,imagen});
   cerrarModalEditar();
   toast('✅ Producto actualizado.');
+}
+
+
+// --- Términos y condiciones / Habeas data ---
+function abrirTerminos() { document.getElementById('modal-terminos').classList.add('visible'); }
+function cerrarTerminos() { document.getElementById('modal-terminos').classList.remove('visible'); }
+function aceptarTerminosModal() {
+  document.getElementById('reg-terminos').checked = true;
+  cerrarTerminos();
+  if (document.getElementById('modal-aceptar-terminos').classList.contains('visible')) confirmarAceptacionTerminos();
+}
+
+async function confirmarAceptacionTerminos() {
+  try {
+    await window.aceptarTerminosFirebase(usuarioActual._key);
+    usuarioActual.aceptoTerminos = true;
+    document.getElementById('modal-aceptar-terminos').classList.remove('visible');
+  } catch (e) {
+    console.error(e);
+    toast('❌ No se pudo guardar. Intenta de nuevo.');
+  }
+}
+function rechazarTerminos() {
+  window.cerrarSesionFirebase();
+  location.reload();
 }
