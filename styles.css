@@ -138,3 +138,8 @@ body{background:#faf3e0;min-height:100vh;color:#3b2415}
 .tile-add{width:100%;height:auto;padding:9px 0;border:none;border-radius:10px;background:#059669;color:#fff;font-size:0.85rem;font-weight:700}
 .tile-add:active{background:#047857;color:#fff}
 .tile-add:disabled{background:#e8d9b8;color:#a58862}
+
+/* Logo */
+.header-left{display:flex;align-items:center;gap:10px}
+.header-logo{width:42px;height:42px;object-fit:contain;background:#fffaf0;border-radius:10px;padding:3px;flex-shrink:0}
+.login-img{width:130px}

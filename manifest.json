@@ -1,14 +1,24 @@
 {
-  "name": "NEXUS23",
-  "short_name": "Nexus23",
-  "description": "Centro de mando para tus plataformas.",
-  "start_url": "index.html",
-  "scope": ".",
+  "name": "Maní García",
+  "short_name": "Maní García",
+  "description": "Maní confitado de calidad superior",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#0d1117",
+  "background_color": "#faf3e0",
+  "theme_color": "#5c3a1e",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

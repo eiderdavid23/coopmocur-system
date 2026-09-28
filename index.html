@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Maní García</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#5c3a1e">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,8 +23,9 @@
 <div id="pantalla-catalogo-publico" style="display:none">
   <div class="header">
     <div class="header-left">
-        <h1>MANÍ GARCÍA</h1>
-        <p>MANÍ CONFITADO DE CALIDAD SUPERIOR</p>
+        <img class="header-logo" src="logo.png" alt="Maní García">
+        <div><h1>MANÍ GARCÍA</h1>
+        <p>MANÍ CONFITADO DE CALIDAD SUPERIOR</p></div>
     </div>
     <div class="header-right" style="flex-direction:row;gap:8px">
       <button class="btn btn-gray" style="padding:6px 12px;font-size:0.72rem" onclick="mostrarLogin()">Iniciar sesión</button>
@@ -34,7 +40,7 @@
   <div class="login-bg">
     <div class="login-box">
       <div class="login-logo">
-        <h1 style="font-size:1.6rem;font-weight:800;color:#5c3a1e">🥜 MANÍ GARCÍA</h1>
+        <img class="login-img" src="logo.png" alt="Maní García">
       </div>
       <div class="login-divider"></div>
 
@@ -87,8 +93,9 @@
 <div id="pantalla-app" style="display:none">
   <div class="header">
     <div class="header-left">
-        <h1>MANÍ GARCÍA</h1>
-        <p>MANÍ CONFITADO DE CALIDAD SUPERIOR</p>
+        <img class="header-logo" src="logo.png" alt="Maní García">
+        <div><h1>MANÍ GARCÍA</h1>
+        <p>MANÍ CONFITADO DE CALIDAD SUPERIOR</p></div>
     </div>
     <div class="header-right">
       <span class="header-user" id="header-usuario"></span>
