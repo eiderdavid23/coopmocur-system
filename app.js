@@ -792,6 +792,7 @@ function procesarImagenSeleccionada(event, prefijo) {
       const preview = document.getElementById(prefijo + '-imagen-preview');
       preview.src = dataUrl;
       preview.style.display = 'block';
+      const t = document.querySelector('label[for="'+prefijo+'-imagen-input"] .foto-txt'); if (t) t.textContent = 'Cambiar foto';
     };
     img.src = e.target.result;
   };
@@ -805,22 +806,19 @@ function miniaturaProducto(item) {
 }
 
 function abrirModalAgregar() {
-  ['ins-nombre','ins-precio','ins-cantidad','ins-preciocompra','ins-imagen'].forEach(id=>document.getElementById(id).value='');
+  ['ins-nombre','ins-precio','ins-cantidad','ins-imagen','ins-imagen-input'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ins-imagen-preview').style.display='none';
+  const ft=document.querySelector('label[for="ins-imagen-input"] .foto-txt'); if(ft) ft.textContent='Elegir foto';
   document.getElementById('modal-agregar').classList.add('visible');
 }
 function cerrarModalAgregar() { document.getElementById('modal-agregar').classList.remove('visible'); }
-function calcularPrecioVenta(pct) {
-  const pc=parseFloat(document.getElementById('ins-preciocompra').value);
-  if(!isNaN(pc)) document.getElementById('ins-precio').value=Math.round(pc*(1+pct/100));
-}
 
 function vistaGanancias() {
   const esAdmin=usuarioActual&&usuarioActual.rol==='admin';
   if(!esAdmin) return '<div class="empty">Sin acceso</div>';
-  const totalG=inventario.reduce((s,r)=>{const pc=r.precioCompra||0;const pv=r.precio||0;return s+((pv-pc)*r.cantidad);},0);
-  const lista=inventario.map(r=>{const pc=r.precioCompra||0;const pv=r.precio||0;const gu=pv-pc;const gt=gu*r.cantidad;
-    return '<div class="card fade"><div><div class="card-name">'+r.nombre+'</div><div class="card-price">Compra: <span>$'+pc.toLocaleString()+'</span></div><div class="card-price">Venta: <span>$'+pv.toLocaleString()+'</span></div><div class="card-price">Ganancia/u: <span style="color:#059669;font-weight:700">$'+gu.toLocaleString()+'</span></div><div class="card-price">Ganancia total: <span style="color:#059669;font-weight:700">$'+gt.toLocaleString()+'</span></div></div></div>';
+  const totalG=inventario.reduce((s,r)=>s+((r.precio||0)*r.cantidad),0);
+  const lista=inventario.map(r=>{const pv=r.precio||0;const gt=pv*r.cantidad;
+    return '<div class="card fade"><div><div class="card-name">'+r.nombre+'</div><div class="card-price">Venta: <span>$'+pv.toLocaleString()+'</span></div><div class="card-price">Venta total: <span style="color:#059669;font-weight:700">$'+gt.toLocaleString()+'</span></div></div></div>';
   }).join('');
 
   const g = gastosInversion;
@@ -872,11 +870,10 @@ async function abrirEditarGastos() {
 function procesarGuardarPieza() {
   const nombre=document.getElementById('ins-nombre').value.trim();
   const precio=parseFloat(document.getElementById('ins-precio').value);
-  const precioCompra=parseFloat(document.getElementById('ins-preciocompra').value)||0;
   const cantidad=parseInt(document.getElementById('ins-cantidad').value);
   const imagen=document.getElementById('ins-imagen').value || '';
   if (!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena nombre, precio de venta y cantidad.');
-  window.guardarEnFirebase({nombre,precio,precioCompra,cantidad,imagen});
+  window.guardarEnFirebase({nombre,precio,cantidad,imagen});
   cerrarModalAgregar();
   toast('✅ Producto agregado.');
 }
@@ -1033,12 +1030,13 @@ function abrirModalEditar(key) {
   if(!r) return;
   document.getElementById('edit-key').value=key;
   document.getElementById('edit-nombre').value=r.nombre||'';
-  document.getElementById('edit-preciocompra').value=r.precioCompra||'';
   document.getElementById('edit-precio').value=r.precio||'';
   document.getElementById('edit-cantidad').value=r.cantidad;
   document.getElementById('edit-imagen').value=r.imagen||'';
   const pv=document.getElementById('edit-imagen-preview');
   if(r.imagen){pv.src=r.imagen;pv.style.display='block';}else{pv.style.display='none';}
+  document.getElementById('edit-imagen-input').value='';
+  const et=document.querySelector('label[for="edit-imagen-input"] .foto-txt'); if(et) et.textContent=r.imagen?'Cambiar foto':'Elegir foto';
   document.getElementById('modal-editar').classList.add('visible');
 }
 function cerrarModalEditar() { document.getElementById('modal-editar').classList.remove('visible'); }
@@ -1046,11 +1044,10 @@ function procesarEditarPieza() {
   const key=document.getElementById('edit-key').value;
   const nombre=document.getElementById('edit-nombre').value.trim();
   const precio=parseFloat(document.getElementById('edit-precio').value);
-  const precioCompra=parseFloat(document.getElementById('edit-preciocompra').value)||0;
   const cantidad=parseInt(document.getElementById('edit-cantidad').value);
   const imagen=document.getElementById('edit-imagen').value || '';
   if (!key||!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena nombre, precio de venta y cantidad.');
-  window.actualizarEnFirebase(key,{nombre,precio,precioCompra,cantidad,imagen});
+  window.actualizarEnFirebase(key,{nombre,precio,cantidad,imagen});
   cerrarModalEditar();
   toast('✅ Producto actualizado.');
 }
