@@ -875,9 +875,10 @@ function procesarGuardarPieza() {
   const precioCompra=parseFloat(document.getElementById('ins-preciocompra').value)||0;
   const cantidad=parseInt(document.getElementById('ins-cantidad').value);
   const imagen=document.getElementById('ins-imagen').value || '';
-  if (!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena todos los campos.');
-  window.actualizarEnFirebase(key,{nombre,precio,precioCompra,cantidad,imagen});
-  cerrarModalEditar();
+  if (!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena nombre, precio de venta y cantidad.');
+  window.guardarEnFirebase({nombre,precio,precioCompra,cantidad,imagen});
+  cerrarModalAgregar();
+  toast('✅ Producto agregado.');
 }
 
 let _eliminarKey=null;
@@ -1024,4 +1025,32 @@ async function editarUsuario(uid) {
     console.error(err);
     toast('❌ No se pudo actualizar el usuario.');
   }
+}
+
+// --- Editar producto ---
+function abrirModalEditar(key) {
+  const r=inventario.find(x=>x._key===key);
+  if(!r) return;
+  document.getElementById('edit-key').value=key;
+  document.getElementById('edit-nombre').value=r.nombre||'';
+  document.getElementById('edit-preciocompra').value=r.precioCompra||'';
+  document.getElementById('edit-precio').value=r.precio||'';
+  document.getElementById('edit-cantidad').value=r.cantidad;
+  document.getElementById('edit-imagen').value=r.imagen||'';
+  const pv=document.getElementById('edit-imagen-preview');
+  if(r.imagen){pv.src=r.imagen;pv.style.display='block';}else{pv.style.display='none';}
+  document.getElementById('modal-editar').classList.add('visible');
+}
+function cerrarModalEditar() { document.getElementById('modal-editar').classList.remove('visible'); }
+function procesarEditarPieza() {
+  const key=document.getElementById('edit-key').value;
+  const nombre=document.getElementById('edit-nombre').value.trim();
+  const precio=parseFloat(document.getElementById('edit-precio').value);
+  const precioCompra=parseFloat(document.getElementById('edit-preciocompra').value)||0;
+  const cantidad=parseInt(document.getElementById('edit-cantidad').value);
+  const imagen=document.getElementById('edit-imagen').value || '';
+  if (!key||!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena nombre, precio de venta y cantidad.');
+  window.actualizarEnFirebase(key,{nombre,precio,precioCompra,cantidad,imagen});
+  cerrarModalEditar();
+  toast('✅ Producto actualizado.');
 }
