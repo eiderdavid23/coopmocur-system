@@ -413,7 +413,7 @@ function tarjetaProductoTemu(r, publico, bloqueado) {
     '<div class="tile-body">'+
       '<div class="tile-name">'+esc(r.nombre)+'</div>'+
       '<div class="tile-row"><div><div class="tile-price">$'+Number(r.precio).toLocaleString()+'</div><div class="tile-stock">'+stockTxt+'</div></div>'+
-      '<button class="tile-add" '+(puedePedir?'':'disabled ')+'onclick="event.stopPropagation();'+accion+'" aria-label="Pedir">＋</button></div>'+
+      '<button class="tile-add" '+(puedePedir?'':'disabled ')+'onclick="event.stopPropagation();'+accion+'" aria-label="Pedir">Pedir</button></div>'+
     '</div></div>';
 }
 
