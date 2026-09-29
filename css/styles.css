@@ -179,3 +179,6 @@ body{background:#faf3e0;min-height:100vh;color:#3b2415}
 .pie-links a{color:#5c3a1e;font-weight:700;text-decoration:none}
 .pie-legal{color:#a58862;font-size:0.7rem;text-decoration:underline}
 .login-box .pie-soporte{margin-top:18px;padding:14px 0 0}
+
+.pie-links a{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#f5ebd6;font-size:0.78rem}
+.pie-links a:first-child{background:#dcfce7;color:#059669}
