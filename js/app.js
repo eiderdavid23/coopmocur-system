@@ -941,8 +941,8 @@ function vistaUsuarios() {
     '<button class="btn-edit" onclick="cambiarEstadoUsuario(\''+u._key+'\',\''+(u.estado||'aprobado')+'\')" title="'+(u.estado==='pendiente'?'Aprobar':'Suspender')+'">'+(u.estado==='pendiente'?'✅':'⛔')+'</button>'+
     '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')" title="Eliminar">🗑️</button></div></div>';
   }).join('');
-  return '<div class="fade"><div class="top-bar"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div><div id="tg-estado" class="tg-estado" onclick="actualizarEstadoTelegram(true)"></div></div>'+
-  '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-gray" onclick="configurarMiTelegram()">🔔 Mi Telegram</button><button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div></div>'+
+  return '<div class="fade"><div class="top-bar" style="flex-direction:column;align-items:stretch;gap:10px"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div></div>'+
+  '<div style="display:flex;gap:8px"><button class="btn btn-gray" style="flex:1;white-space:nowrap" onclick="configurarMiTelegram()">🔔 Mi Telegram</button><button class="btn btn-green" style="flex:1;white-space:nowrap" onclick="abrirCrearUsuario()">+ Crear usuario</button></div><div id="tg-estado" class="tg-estado" style="align-self:flex-start;margin-top:0" onclick="actualizarEstadoTelegram(true)"></div></div>'+
   '<input type="text" class="search" id="buscar-usuarios" placeholder="🔍 Buscar por nombre, negocio o teléfono..." value="'+esc(window._filtroUsuarios||'')+'" oninput="filtrarUsuarios(this.value)">'+
   '<div id="lista-usuarios">'+filas+'</div></div>';
 }
