@@ -24,6 +24,41 @@ const gastosRef = ref(db, 'delimani_gastos');
 const pedidosRef = ref(db, 'delimani_pedidos');
 const apartadosRef = ref(db, 'delimani_apartados');
 
+const adminTelegramRef = ref(db, 'delimani_admin_telegram');
+const telegramConfigRef = ref(db, 'delimani_config/telegram');
+
+// El token del bot ya NO esta en el codigo: vive en Firebase (delimani_config/telegram/token)
+window.guardarChatIdTelegramPropio = function(uid, chatId) {
+  return set(ref(db, 'delimani_admin_telegram/' + uid), chatId);
+};
+
+window.guardarTokenTelegram = function(token) {
+  return set(ref(db, 'delimani_config/telegram/token'), token);
+};
+
+async function obtenerChatIdsAdmin() {
+  const snap = await get(adminTelegramRef);
+  return Object.values(snap.val() || {}).filter(Boolean);
+}
+
+function enviarMensajeTelegram(token, chatId, mensaje) {
+  fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text: mensaje })
+  }).catch(err => console.error('Error enviando notificación a Telegram:', err));
+}
+
+async function notificarTelegram(mensaje) {
+  try {
+    const cfg = await get(telegramConfigRef);
+    const token = cfg.val() && cfg.val().token;
+    if (!token) return;
+    const ids = await obtenerChatIdsAdmin();
+    ids.forEach(id => enviarMensajeTelegram(token, id, mensaje));
+  } catch (e) { console.error('Telegram:', e); }
+}
+
 async function perfilSiValido(uid) {
   const snap = await get(ref(db, 'usuarios/' + uid));
   const datos = snap.val();
@@ -187,6 +222,13 @@ window.guardarPedidoEnFirebase = function(pedido) {
   // Copia anonima (sin datos personales) para que todos vean cuanto esta apartado
   set(ref(db, 'delimani_apartados/' + nuevo.key), { productoKey: pedido.productoKey, cantidad: Number(pedido.cantidad) })
     .catch(err => console.error('No se pudo registrar el apartado:', err));
+  let msg = '🥜 Nuevo pedido en Maní García\n' +
+    pedido.usuarioNombre + ' pidió ' + pedido.cantidad + ' u. de ' + pedido.productoNombre +
+    ' ($' + (pedido.precio * pedido.cantidad).toLocaleString('es-CO') + ')';
+  if (pedido.negocio) msg += '\nNegocio: ' + pedido.negocio;
+  if (pedido.nota) msg += '\nNota: ' + pedido.nota;
+  if (pedido.lat && pedido.lng) msg += '\nUbicación: https://www.google.com/maps?q=' + pedido.lat + ',' + pedido.lng;
+  notificarTelegram(msg);
 };
 
 window.actualizarPedidoFirebase = function(key, cambios) {

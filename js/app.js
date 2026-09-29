@@ -941,7 +941,7 @@ function vistaUsuarios() {
     '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')" title="Eliminar">🗑️</button></div></div>';
   }).join('');
   return '<div class="fade"><div class="top-bar"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div></div>'+
-  '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div></div>'+
+  '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-gray" onclick="configurarMiTelegram()">🔔 Mi Telegram</button><button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div></div>'+
   '<input type="text" class="search" id="buscar-usuarios" placeholder="🔍 Buscar por nombre, negocio o teléfono..." value="'+esc(window._filtroUsuarios||'')+'" oninput="filtrarUsuarios(this.value)">'+
   '<div id="lista-usuarios">'+filas+'</div></div>';
 }
@@ -952,6 +952,22 @@ function filtrarUsuarios(valor) {
   renderizar();
   const inp = document.getElementById('buscar-usuarios');
   if (inp) { inp.focus(); inp.setSelectionRange(pos, pos); }
+}
+
+async function configurarMiTelegram() {
+  const r = await modalPrompt({
+    titulo: '🔔 Notificaciones de Telegram',
+    textoAceptar: 'Guardar',
+    campos: [
+      { id: 'chatid', label: 'Tu chat_id de Telegram (escríbele "hola" a tu bot y saca tu id con @userinfobot)' },
+      { id: 'token', label: 'Token del bot (solo si lo cambiaste en BotFather; si no, déjalo vacío)' }
+    ]
+  });
+  if (!r) return;
+  if (!r.chatid && !r.token) return toast('⚠️ Escribe tu chat_id o el token.');
+  if (r.chatid) await window.guardarChatIdTelegramPropio(usuarioActual._key, r.chatid.trim());
+  if (r.token) await window.guardarTokenTelegram(r.token.trim());
+  toast('✅ Telegram guardado.');
 }
 
 function cambiarRolUsuario(uid, rolActualU) {
