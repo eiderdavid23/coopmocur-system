@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#5c3a1e">
-  <link rel="stylesheet" href="css/styles.css?v=20260930">
+  <link rel="stylesheet" href="css/styles.css?v=20260930b">
 </head>
 <body>
 
@@ -33,14 +33,17 @@
     </div>
   </div>
   <div class="main" id="contenido-catalogo-publico"></div>
-<div class="pie-soporte">
-  <div class="pie-titulo">¿Necesitas ayuda? Soporte Maní García</div>
-  <div class="pie-links">
+<footer class="pie-oscuro">
+  <div>© 2026 - <b>Maní García</b> <span class="pie-sep">|</span> Maní confitado de calidad superior</div>
+  <div class="pie-linea2">
+    <a href="#" onclick="abrirTerminos('privacidad');return false">Privacidad</a>
+    <a href="#" onclick="abrirTerminos();return false">Términos &amp; Condiciones</a>
+  </div>
+  <div class="pie-linea3">
     <a href="https://wa.me/573118684564" target="_blank" rel="noopener">💬 WhatsApp: 311 868 4564</a>
     <a href="mailto:eiderdavidgarcia23@gmail.com">✉️ eiderdavidgarcia23@gmail.com</a>
   </div>
-  <a href="#" class="pie-legal" onclick="abrirTerminos();return false">Términos y Condiciones · Política de datos</a>
-</div>
+</footer>
 </div>
 
 <!-- LOGIN / REGISTRO -->
@@ -116,16 +119,30 @@
       </div>
 
       <p style="text-align:center;margin-top:16px"><a href="#" onclick="mostrarCatalogoPublico();return false" style="font-size:0.75rem;color:#a58862">← Volver al catálogo</a></p>
-<div class="pie-soporte">
-  <div class="pie-titulo">¿Necesitas ayuda? Soporte Maní García</div>
-  <div class="pie-links">
+<footer class="pie-oscuro">
+  <div>© 2026 - <b>Maní García</b> <span class="pie-sep">|</span> Maní confitado de calidad superior</div>
+  <div class="pie-linea2">
+    <a href="#" onclick="abrirTerminos('privacidad');return false">Privacidad</a>
+    <a href="#" onclick="abrirTerminos();return false">Términos &amp; Condiciones</a>
+  </div>
+  <div class="pie-linea3">
     <a href="https://wa.me/573118684564" target="_blank" rel="noopener">💬 WhatsApp: 311 868 4564</a>
     <a href="mailto:eiderdavidgarcia23@gmail.com">✉️ eiderdavidgarcia23@gmail.com</a>
   </div>
-  <a href="#" class="pie-legal" onclick="abrirTerminos();return false">Términos y Condiciones · Política de datos</a>
-</div>
+</footer>
     </div>
   </div>
+<footer class="pie-oscuro">
+  <div>© 2026 - <b>Maní García</b> <span class="pie-sep">|</span> Maní confitado de calidad superior</div>
+  <div class="pie-linea2">
+    <a href="#" onclick="abrirTerminos('privacidad');return false">Privacidad</a>
+    <a href="#" onclick="abrirTerminos();return false">Términos &amp; Condiciones</a>
+  </div>
+  <div class="pie-linea3">
+    <a href="https://wa.me/573118684564" target="_blank" rel="noopener">💬 WhatsApp: 311 868 4564</a>
+    <a href="mailto:eiderdavidgarcia23@gmail.com">✉️ eiderdavidgarcia23@gmail.com</a>
+  </div>
+</footer>
 </div>
 
 <!-- APP PRINCIPAL -->
@@ -154,14 +171,6 @@
   </div>
 
   <div class="main" id="contenido-principal"></div>
-<div class="pie-soporte">
-  <div class="pie-titulo">¿Necesitas ayuda? Soporte Maní García</div>
-  <div class="pie-links">
-    <a href="https://wa.me/573118684564" target="_blank" rel="noopener">💬 WhatsApp: 311 868 4564</a>
-    <a href="mailto:eiderdavidgarcia23@gmail.com">✉️ eiderdavidgarcia23@gmail.com</a>
-  </div>
-  <a href="#" class="pie-legal" onclick="abrirTerminos();return false">Términos y Condiciones · Política de datos</a>
-</div>
 </div>
 
 <!-- MODAL AGREGAR PRODUCTO -->
@@ -290,7 +299,7 @@
       <h4>6. Ley aplicable</h4>
       <p>Estos términos se rigen por las leyes de la República de Colombia.</p>
 
-      <h3 style="margin-top:18px">🔐 Política de Tratamiento de Datos Personales (Habeas Data)</h3>
+      <h3 id="terminos-privacidad" style="margin-top:18px">🔐 Política de Tratamiento de Datos Personales (Habeas Data)</h3>
 
       <h4>Marco legal</h4>
       <p>Esta política se basa en el artículo 15 de la Constitución Política de Colombia, la Ley 1581 de 2012 (protección de datos personales), el Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015) y la Ley 1266 de 2008 en lo que aplique.</p>
@@ -370,7 +379,7 @@
 
 <div id="toast"></div>
 
-  <script src="js/app.js?v=20260930"></script>
-<script type="module" src="js/firebase-db.js?v=20260930"></script>
+  <script src="js/app.js?v=20260930b"></script>
+<script type="module" src="js/firebase-db.js?v=20260930b"></script>
 </body>
 </html>

@@ -1096,7 +1096,14 @@ function procesarEditarPieza() {
 
 
 // --- Términos y condiciones / Habeas data ---
-function abrirTerminos() { document.getElementById('modal-terminos').classList.add('visible'); }
+function abrirTerminos(seccion) {
+  document.getElementById('modal-terminos').classList.add('visible');
+  setTimeout(() => {
+    const caja = document.querySelector('#modal-terminos .terminos-texto');
+    if (seccion === 'privacidad') document.getElementById('terminos-privacidad').scrollIntoView({ block: 'start' });
+    else if (caja) caja.scrollTop = 0;
+  }, 0);
+}
 function cerrarTerminos() { document.getElementById('modal-terminos').classList.remove('visible'); }
 function aceptarTerminosModal() {
   document.getElementById('reg-terminos').checked = true;

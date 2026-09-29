@@ -191,3 +191,12 @@ body{background:#faf3e0;min-height:100vh;color:#3b2415}
 .pie-links a:first-child{color:#059669}
 .pie-legal{font-size:0.62rem}
 .main{min-height:calc(100vh - 330px)}
+
+/* pie oscuro */
+.pie-oscuro{background:#3b2413;color:#d9c3a0;text-align:center;padding:22px 16px 28px;font-size:0.72rem;margin-top:24px;line-height:1.5}
+.pie-oscuro b{color:#fff}
+.pie-oscuro .pie-sep{margin:0 6px;opacity:0.4}
+.pie-oscuro a{color:#c9b18a;text-decoration:none}
+.pie-linea2{display:flex;justify-content:center;gap:22px;margin-top:12px}
+.pie-linea3{display:flex;justify-content:center;gap:6px 16px;flex-wrap:wrap;margin-top:12px}
+.pie-linea3 a{color:#e8d9b8;font-weight:700}
