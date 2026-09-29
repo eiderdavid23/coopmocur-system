@@ -36,6 +36,24 @@ window.guardarTokenTelegram = function(token) {
   return set(ref(db, 'delimani_config/telegram/token'), token);
 };
 
+window.estadoTelegram = async function(uid) {
+  try {
+    const cfg = await get(telegramConfigRef);
+    const token = cfg.val() && cfg.val().token;
+    if (!token) return { ok: false, motivo: 'falta el token' };
+    const idSnap = await get(ref(db, 'delimani_admin_telegram/' + uid));
+    const chatId = idSnap.val();
+    if (!chatId) return { ok: false, motivo: 'falta tu chat_id' };
+    const bot = await (await fetch('https://api.telegram.org/bot' + token + '/getMe')).json();
+    if (!bot.ok) return { ok: false, motivo: 'token inválido' };
+    const chat = await (await fetch('https://api.telegram.org/bot' + token + '/getChat?chat_id=' + encodeURIComponent(chatId))).json();
+    if (!chat.ok) return { ok: false, motivo: 'escríbele /start a tu bot' };
+    return { ok: true, motivo: '' };
+  } catch (e) {
+    return { ok: false, motivo: 'sin conexión' };
+  }
+};
+
 async function obtenerChatIdsAdmin() {
   const snap = await get(adminTelegramRef);
   return Object.values(snap.val() || {}).filter(Boolean);

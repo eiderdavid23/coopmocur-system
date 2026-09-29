@@ -924,6 +924,7 @@ window.actualizarInventarioDesdeFirebase=function(lista){
 
 // --- Gestión de usuarios (solo admin) ---
 function vistaUsuarios() {
+  setTimeout(() => actualizarEstadoTelegram(false), 0);
   if (!usuarioActual || usuarioActual.rol !== 'admin') return '<div class="empty">Sin acceso</div>';
   const q = (window._filtroUsuarios || '').toLowerCase();
   const lista = usuariosLista.filter(u => !q || [u.usuario, u.negocio, u.telefono, u.rol].join(' ').toLowerCase().includes(q));
@@ -940,7 +941,7 @@ function vistaUsuarios() {
     '<button class="btn-edit" onclick="cambiarEstadoUsuario(\''+u._key+'\',\''+(u.estado||'aprobado')+'\')" title="'+(u.estado==='pendiente'?'Aprobar':'Suspender')+'">'+(u.estado==='pendiente'?'✅':'⛔')+'</button>'+
     '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')" title="Eliminar">🗑️</button></div></div>';
   }).join('');
-  return '<div class="fade"><div class="top-bar"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div></div>'+
+  return '<div class="fade"><div class="top-bar"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div><div id="tg-estado" class="tg-estado" onclick="actualizarEstadoTelegram(true)"></div></div>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-gray" onclick="configurarMiTelegram()">🔔 Mi Telegram</button><button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div></div>'+
   '<input type="text" class="search" id="buscar-usuarios" placeholder="🔍 Buscar por nombre, negocio o teléfono..." value="'+esc(window._filtroUsuarios||'')+'" oninput="filtrarUsuarios(this.value)">'+
   '<div id="lista-usuarios">'+filas+'</div></div>';
@@ -968,6 +969,7 @@ async function configurarMiTelegram() {
   if (r.chatid) await window.guardarChatIdTelegramPropio(usuarioActual._key, r.chatid.trim());
   if (r.token) await window.guardarTokenTelegram(r.token.trim());
   toast('✅ Telegram guardado.');
+  actualizarEstadoTelegram(true);
 }
 
 function cambiarRolUsuario(uid, rolActualU) {
@@ -1127,4 +1129,21 @@ async function intentarRecuperar() {
   }
   msg.style.display = 'block';
   btn.disabled = false;
+}
+
+let _estadoTG = null;
+function pintarEstadoTelegram(e) {
+  const el = document.getElementById('tg-estado');
+  if (!el) return;
+  if (!e) { el.className = 'tg-estado'; el.innerHTML = '<span class="tg-dot"></span> Comprobando Telegram…'; return; }
+  el.className = 'tg-estado ' + (e.ok ? 'tg-ok' : 'tg-off');
+  el.innerHTML = '<span class="tg-dot"></span> ' + (e.ok ? 'Telegram conectado' : 'Telegram desconectado · ' + e.motivo);
+}
+async function actualizarEstadoTelegram(forzar) {
+  if (!window.estadoTelegram || !usuarioActual) return;
+  if (!forzar && _estadoTG && Date.now() - _estadoTG.t < 60000) { pintarEstadoTelegram(_estadoTG); return; }
+  pintarEstadoTelegram(null);
+  const e = await window.estadoTelegram(usuarioActual._key);
+  _estadoTG = { ok: e.ok, motivo: e.motivo, t: Date.now() };
+  pintarEstadoTelegram(_estadoTG);
 }
