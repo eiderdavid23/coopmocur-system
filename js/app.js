@@ -6,6 +6,8 @@ let _escuchandoUsuarios=false;
 let gastosInversion={mani:600000,transporte:70000,bolsaUnidad:70000,bolsaPaquete:2000};
 let _escuchandoGastos=false;
 let pedidosLista=[];
+let apartadosMapa={};
+let _escuchandoApartados=false;
 let _escuchandoPedidos=false;
 let pedidoPendientePreLogin=null;
 
@@ -140,11 +142,13 @@ function mostrarRegistro() {
 }
 
 function mostrarFormularioLogin() {
+  document.getElementById('bloque-recuperar').style.display = 'none';
   document.getElementById('bloque-login').style.display = 'block';
   document.getElementById('bloque-registro').style.display = 'none';
 }
 
 function mostrarFormularioRegistro() {
+  document.getElementById('bloque-recuperar').style.display = 'none';
   document.getElementById('bloque-login').style.display = 'none';
   document.getElementById('bloque-registro').style.display = 'block';
 }
@@ -200,20 +204,24 @@ async function intentarLogin() {
 }
 
 async function intentarRegistroCliente() {
-  const usuario = document.getElementById('reg-usuario').value.trim();
+  const nombreCompleto = document.getElementById('reg-nombre').value.trim();
+  const usuario = document.getElementById('reg-usuario').value.trim().toLowerCase().replace(/\s+/g, '');
   const negocio = document.getElementById('reg-negocio').value.trim();
+  const correo = document.getElementById('reg-correo').value.trim().toLowerCase();
   const telefono = document.getElementById('reg-telefono').value.trim();
   const password = document.getElementById('reg-password').value;
   const btn = document.getElementById('registro-btn');
   const err = document.getElementById('registro-error');
   err.style.display = 'none';
-  if (!usuario || !password) { toast('⚠️ Ingresa tu nombre y una contraseña.'); return; }
+  if (!nombreCompleto || !usuario || !password) { toast('⚠️ Completa tu nombre, usuario y contraseña.'); return; }
+  if (!/^[a-z0-9._]{3,20}$/.test(usuario)) { toast('⚠️ Usuario de 3 a 20 caracteres: solo letras, números, punto o guion bajo.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) { toast('⚠️ Escribe un correo válido (lo necesitas para recuperar tu contraseña).'); return; }
   if (password.length < 6) { toast('⚠️ La contraseña debe tener al menos 6 caracteres.'); return; }
   if (!document.getElementById('reg-terminos').checked) { toast('⚠️ Debes aceptar los Términos y Condiciones y el tratamiento de datos.'); return; }
   btn.textContent = 'Creando cuenta...';
   btn.disabled = true;
   try {
-    const perfil = await window.registrarClienteFirebase(usuario, negocio, telefono, password);
+    const perfil = await window.registrarClienteFirebase(usuario, negocio, telefono, password, nombreCompleto, correo);
     usuarioActual = perfil;
     iniciarApp();
     continuarPedidoPendiente();
@@ -221,7 +229,9 @@ async function intentarRegistroCliente() {
     console.error(e);
     btn.innerHTML = '<span>→</span> Crear cuenta';
     btn.disabled = false;
-    err.textContent = (e.code === 'auth/email-already-in-use') ? 'Ese nombre de usuario ya existe.' : 'No se pudo crear la cuenta.';
+    err.textContent = (e.code === 'app/usuario-existe') ? 'Ese usuario ya existe, elige otro.'
+      : (e.code === 'auth/email-already-in-use') ? 'Ese correo ya tiene una cuenta. Usa "¿Olvidaste tu contraseña?".'
+      : 'No se pudo crear la cuenta.';
     err.style.display = 'block';
   }
 }
@@ -265,12 +275,22 @@ function iniciarApp() {
     _escuchandoPedidos = true;
     window.escucharPedidos((data) => {
       pedidosLista = Object.entries(data).map(([k,v]) => ({...v, _key:k}));
+      if (esAdmin && window.sincronizarApartados) window.sincronizarApartados(data);
       const tabPedidos = document.getElementById('tab-PEDIDOS');
       if (tabPedidos && esAdmin) {
         const pendientes = pedidosLista.filter(p => p.estado === 'pendiente').length;
         tabPedidos.textContent = '🧾 PEDIDOS' + (pendientes > 0 ? ' (' + pendientes + ')' : '');
       }
       if (pestanaActual === 'PEDIDOS' || pestanaActual === 'CATALOGO') renderizar();
+      if (_detalleKey) renderDetalleProducto();
+    }, usuarioActual._key, esAdmin);
+  }
+
+  if (window.escucharApartados && !_escuchandoApartados) {
+    _escuchandoApartados = true;
+    window.escucharApartados((data) => {
+      apartadosMapa = data;
+      if (pestanaActual === 'CATALOGO') renderizar();
       if (_detalleKey) renderDetalleProducto();
     });
   }
@@ -331,9 +351,9 @@ function renderizar() {
 
 // Cuánto de un producto está "apartado" por pedidos que aún no se han entregado ni cancelado
 function reservadoDeProducto(key) {
-  return pedidosLista
-    .filter(p => p.productoKey === key && (p.estado === 'pendiente' || p.estado === 'confirmado'))
-    .reduce((s, p) => s + Number(p.cantidad || 0), 0);
+  return Object.values(apartadosMapa)
+    .filter(a => a.productoKey === key)
+    .reduce((s, a) => s + Number(a.cantidad || 0), 0);
 }
 
 function disponibilidadReal(item) {
@@ -921,7 +941,7 @@ function vistaUsuarios() {
     '<button class="btn-del" onclick="eliminarUsuarioApp(\''+u._key+'\')" title="Eliminar">🗑️</button></div></div>';
   }).join('');
   return '<div class="fade"><div class="top-bar"><div><div class="section-title">👥 USUARIOS DEL SISTEMA</div><div class="section-sub">'+usuariosLista.length+' usuario(s)</div></div>'+
-  '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-gray" onclick="configurarMiTelegram()">🔔 Mi Telegram</button><button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div></div>'+
+  '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-green" onclick="abrirCrearUsuario()">+ Crear usuario</button></div></div>'+
   '<input type="text" class="search" id="buscar-usuarios" placeholder="🔍 Buscar por nombre, negocio o teléfono..." value="'+esc(window._filtroUsuarios||'')+'" oninput="filtrarUsuarios(this.value)">'+
   '<div id="lista-usuarios">'+filas+'</div></div>';
 }
@@ -932,20 +952,6 @@ function filtrarUsuarios(valor) {
   renderizar();
   const inp = document.getElementById('buscar-usuarios');
   if (inp) { inp.focus(); inp.setSelectionRange(pos, pos); }
-}
-
-async function configurarMiTelegram() {
-  const r = await modalPrompt({
-    titulo: '🔔 Notificaciones de Telegram',
-    textoAceptar: 'Guardar',
-    campos: [
-      { id: 'chatid', label: 'Tu chat_id de Telegram (escríbele "hola" a tu bot y saca tu id con @userinfobot)' }
-    ]
-  });
-  if (!r) return;
-  if (!r.chatid) return toast('⚠️ Ingresa tu chat_id.');
-  await window.guardarChatIdTelegramPropio(usuarioActual._key, r.chatid.trim());
-  toast('✅ Listo, ahora te llegarán los avisos de pedidos por Telegram.');
 }
 
 function cambiarRolUsuario(uid, rolActualU) {
@@ -1079,4 +1085,30 @@ async function confirmarAceptacionTerminos() {
 function rechazarTerminos() {
   window.cerrarSesionFirebase();
   location.reload();
+}
+
+function mostrarRecuperar() {
+  document.getElementById('bloque-login').style.display = 'none';
+  document.getElementById('bloque-registro').style.display = 'none';
+  document.getElementById('bloque-recuperar').style.display = 'block';
+  document.getElementById('recuperar-msg').style.display = 'none';
+}
+
+async function intentarRecuperar() {
+  const entrada = document.getElementById('rec-usuario').value.trim();
+  const msg = document.getElementById('recuperar-msg');
+  const btn = document.getElementById('recuperar-btn');
+  if (!entrada) { toast('⚠️ Escribe tu usuario o correo.'); return; }
+  btn.disabled = true;
+  try {
+    const r = await window.recuperarContrasenaFirebase(entrada);
+    msg.textContent = (r === 'enviado')
+      ? '✅ Si el correo está registrado, te enviamos un enlace para crear una nueva contraseña. Revisa también la carpeta de spam.'
+      : 'Tu cuenta es anterior y no tiene correo registrado. Escríbenos por WhatsApp y te ayudamos.';
+  } catch (e) {
+    console.error(e);
+    msg.textContent = 'No se pudo enviar. Revisa el correo e intenta de nuevo.';
+  }
+  msg.style.display = 'block';
+  btn.disabled = false;
 }

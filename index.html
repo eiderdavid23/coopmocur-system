@@ -47,8 +47,8 @@
       <div id="bloque-login">
         <div id="login-error" class="login-error">Usuario o contraseña incorrectos</div>
         <div class="field-wrap">
-          <div class="field-label"><span>👤</span> Usuario</div>
-          <input type="text" id="login-usuario" placeholder="Tu usuario" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
+          <div class="field-label"><span>👤</span> Usuario o correo</div>
+          <input type="text" id="login-usuario" placeholder="Tu usuario o correo" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
         </div>
         <div class="field-wrap">
           <div class="field-label"><span>🔒</span> Contraseña</div>
@@ -57,14 +57,36 @@
         <button class="login-btn" id="login-btn" onclick="intentarLogin()">
           <span>→</span> Ingresar
         </button>
+        <p style="text-align:center;font-size:0.78rem;color:#a58862;margin-top:14px"><a href="#" onclick="mostrarRecuperar();return false" style="color:#5c3a1e;font-weight:700">¿Olvidaste tu contraseña?</a></p>
         <p style="text-align:center;font-size:0.78rem;color:#a58862;margin-top:14px">¿Eres cliente nuevo? <a href="#" onclick="mostrarFormularioRegistro();return false" style="color:#5c3a1e;font-weight:700">Crea tu cuenta</a></p>
+      </div>
+
+      <div id="bloque-recuperar" style="display:none">
+        <p style="font-size:0.85rem;color:#7a5c3a;margin-bottom:12px;text-align:center">Escribe tu usuario o tu correo y te enviamos un enlace para crear una nueva contraseña.</p>
+        <div id="recuperar-msg" style="display:none;font-size:0.82rem;color:#5c3a1e;background:#fdf6ec;border:1px solid #ecd9bc;padding:10px;border-radius:10px;margin-bottom:12px"></div>
+        <div class="field-wrap">
+          <div class="field-label"><span>👤</span> Usuario o correo</div>
+          <input type="text" id="rec-usuario" placeholder="Tu usuario o correo" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
+        </div>
+        <button class="login-btn" id="recuperar-btn" onclick="intentarRecuperar()">
+          <span>✉️</span> Enviar enlace
+        </button>
+        <p style="text-align:center;font-size:0.78rem;color:#a58862;margin-top:14px"><a href="#" onclick="mostrarFormularioLogin();return false" style="color:#5c3a1e;font-weight:700">← Volver a ingresar</a></p>
       </div>
 
       <div id="bloque-registro" style="display:none">
         <div id="registro-error" class="login-error"></div>
         <div class="field-wrap">
-          <div class="field-label"><span>👤</span> Tu nombre</div>
-          <input type="text" id="reg-usuario" placeholder="Nombre completo" class="field-input" autocomplete="off">
+          <div class="field-label"><span>🧑</span> Nombre completo</div>
+          <input type="text" id="reg-nombre" placeholder="Ej: Juan Pérez" class="field-input" autocomplete="off">
+        </div>
+        <div class="field-wrap">
+          <div class="field-label"><span>👤</span> Usuario (corto, para entrar)</div>
+          <input type="text" id="reg-usuario" placeholder="Ej: juan23" maxlength="20" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
+        </div>
+        <div class="field-wrap">
+          <div class="field-label"><span>✉️</span> Correo (para recuperar tu contraseña)</div>
+          <input type="email" id="reg-correo" placeholder="Ej: juan@gmail.com" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
         </div>
         <div class="field-wrap">
           <div class="field-label"><span>🏬</span> Nombre del negocio (opcional)</div>
@@ -253,10 +275,10 @@
       <p>Maní García, Curumani. Correo: eiderdavidgarcia23@gmail.com.</p>
 
       <h4>Datos que recolectamos</h4>
-      <p>Nombre, nombre del negocio (opcional), número de WhatsApp, usuario y contraseña (la contraseña se almacena cifrada por el proveedor de autenticación), datos de tus pedidos y, si tú lo autorizas al pedir, tu ubicación de entrega. No recolectamos datos sensibles ni datos de menores de edad.</p>
+      <p>Nombre completo, usuario, correo electrónico, nombre del negocio (opcional), número de WhatsApp y contraseña (la contraseña se almacena cifrada por el proveedor de autenticación), datos de tus pedidos y, si tú lo autorizas al pedir, tu ubicación de entrega. No recolectamos datos sensibles ni datos de menores de edad.</p>
 
       <h4>Finalidades</h4>
-      <p>Crear y administrar tu cuenta, gestionar y entregar tus pedidos, contactarte por WhatsApp sobre tus pedidos, llevar el control de ventas y cumplir obligaciones legales.</p>
+      <p>Crear y administrar tu cuenta, gestionar y entregar tus pedidos, contactarte por WhatsApp sobre tus pedidos, enviarte enlaces para recuperar tu contraseña, llevar el control de ventas y cumplir obligaciones legales.</p>
 
       <h4>Almacenamiento y terceros</h4>
       <p>Tus datos se guardan en servicios de Google Firebase, que pueden operar en servidores fuera de Colombia. No vendemos ni compartimos tus datos con terceros para publicidad.</p>
