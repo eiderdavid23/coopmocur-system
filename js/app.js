@@ -960,7 +960,7 @@ async function configurarMiTelegram() {
     textoAceptar: 'Guardar',
     campos: [
       { id: 'chatid', label: 'Tu chat_id de Telegram (escríbele "hola" a tu bot y saca tu id con @userinfobot)' },
-      { id: 'token', label: 'Token del bot (solo si lo cambiaste en BotFather; si no, déjalo vacío)' }
+      { id: 'token', label: 'Token del bot' }
     ]
   });
   if (!r) return;
