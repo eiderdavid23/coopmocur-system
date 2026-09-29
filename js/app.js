@@ -702,13 +702,15 @@ function cambiarEstadoPedido(key, nuevoEstado) {
     if (p) abrirWhatsAppConfirmacion(p);
     toast('✅ Pedido confirmado.');
   } else {
+    const p = pedidosLista.find(x => x._key === key);
+    if (p) abrirWhatsAppRechazo(p);
     toast('✖️ Pedido cancelado.');
   }
 }
 
 function abrirWhatsAppPorId(key) {
   const p = pedidosLista.find(x => x._key === key);
-  if (p) abrirWhatsAppConfirmacion(p);
+  if (p) abrirWhatsAppPedido(p);
 }
 
 function normalizarNumeroWhatsApp(telefono) {
@@ -723,7 +725,19 @@ function abrirWhatsAppConfirmacion(pedido) {
   if (!numero) { toast('⚠️ Este pedido no tiene WhatsApp guardado, avísale por otro medio.'); return; }
   const mensaje = 'Hola ' + pedido.usuarioNombre + ', tu pedido de ' + pedido.cantidad + ' u. de ' + pedido.productoNombre +
     ' fue confirmado ✅. En breve estará en camino / listo para recoger. ¡Gracias por tu compra en Maní García!';
-  window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent(mensaje), '_blank');
+  abrirWhatsAppPedido(pedido, mensaje);
+}
+
+function abrirWhatsAppRechazo(pedido) {
+  const mensaje = 'Hola ' + pedido.usuarioNombre + ', lamentablemente tu pedido de ' + pedido.cantidad + ' u. de ' + pedido.productoNombre +
+    ' no pudo ser confirmado ❌. Si quieres, escríbenos y lo revisamos. ¡Gracias por tu interés en Maní García!';
+  abrirWhatsAppPedido(pedido, mensaje);
+}
+
+function abrirWhatsAppPedido(pedido, mensaje) {
+  const numero = normalizarNumeroWhatsApp(pedido.telefono);
+  if (!numero) { toast('⚠️ Este pedido no tiene WhatsApp guardado, avísale por otro medio.'); return; }
+  window.open('https://wa.me/' + numero + (mensaje ? '?text=' + encodeURIComponent(mensaje) : ''), '_blank');
 }
 
 function entregarPedido(key) {
